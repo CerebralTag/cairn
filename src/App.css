@@ -1,0 +1,766 @@
+.home {
+  max-width: 480px;
+  margin: 0 auto;
+  /* env(safe-area-inset-*) keeps content clear of the notch and rounded corners */
+  padding: calc(var(--space) + env(safe-area-inset-top)) max(var(--space), env(safe-area-inset-right)) var(--space)
+    max(var(--space), env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space);
+}
+
+.card h2 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.rings {
+  display: flex;
+  flex-wrap: wrap; /* a fifth goal drops to a new row instead of squeezing or overflowing */
+  justify-content: space-around;
+  gap: 16px 8px;
+  text-align: center;
+}
+
+.ring {
+  max-width: 96px;
+}
+
+.ring-title {
+  font-weight: 600;
+}
+
+.did-something {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border: none;
+  border-radius: var(--radius);
+  padding: 20px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list li.done {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none; /* never squashed by a long title next to it */
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form input,
+.form select {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.form-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.form-buttons button {
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.form-buttons .primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+}
+
+/* Bottom navigation */
+.home {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: env(safe-area-inset-bottom); /* clear the iPhone home bar */
+  display: flex;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.navbar button {
+  flex: 1;
+  padding: 16px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.navbar button.active {
+  color: var(--color-accent);
+}
+
+/* History */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--color-ring-track);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.tab.active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.range-nav,
+.range-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.range-nav button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 8px;
+  width: 40px;
+  height: 36px;
+  font-size: 1.2rem;
+}
+
+.range-picker input {
+  font: inherit;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* Year view: one column per week, wider than the screen, so it scrolls sideways with
+   cells big enough to tap. It opens scrolled to today. */
+.heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.heatmap-compact {
+  display: flex;
+  gap: 3px;
+  width: max-content;
+}
+
+.heat-column {
+  display: grid;
+  grid-template-rows: 14px repeat(7, 18px);
+  gap: 3px;
+}
+
+.month-label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: visible;
+  line-height: 14px;
+}
+
+.heat-cell {
+  border: none;
+  border-radius: 6px;
+  aspect-ratio: 1;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  padding: 0;
+}
+
+.heatmap-compact .heat-cell {
+  width: 18px;
+  height: 18px;
+  aspect-ratio: auto;
+  border-radius: 4px;
+}
+
+.heat-cell.selected {
+  outline: 2px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+.goal-chart + .goal-chart {
+  margin-top: 8px;
+}
+
+.goal-chart-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.tooltip {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  align-self: flex-start;
+  padding: 8px 6px; /* a taller hit area than the text alone */
+}
+
+/* Goals */
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.children {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.children label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-buttons button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Area chips and link rows */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.chip.on {
+  color: var(--color-text); /* the tinted fill and border come from the chip's own style */
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.session-form input {
+  font: inherit;
+  padding: 6px 8px;
+  width: 140px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Manage */
+.todo-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+  padding: 0;
+}
+
+.swatch.on {
+  outline: 2px solid var(--color-text);
+}
+
+.chip.on.neutral {
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+.dot.small {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 6px;
+}
+
+/* Backup */
+.file-button {
+  display: inline-block;
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.file-button input {
+  display: none;
+}
+
+.pending {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Quick wins */
+.chip.quick {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.chip.more {
+  border-style: dashed;
+  color: var(--color-text-muted);
+}
+
+.section-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.section-toggle h2 {
+  margin: 0;
+}
+
+.two-up {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); /* minmax(0, ...) lets inputs shrink instead of overflowing */
+  gap: 8px;
+}
+
+.two-up input {
+  min-width: 0;
+}
+
+/* A form card inside another card (editing a row) shouldn't draw a second box. */
+.card .card {
+  border: none;
+  padding: 0;
+  background: none;
+}
+
+.toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  max-width: 448px;
+  margin: 0 auto;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.toast button {
+  background: none;
+  border: none;
+  color: var(--color-bg);
+  font-weight: 700;
+  padding: 8px 4px;
+  text-decoration: underline;
+}
+
+/* Timer, log, overall goal */
+.secondary {
+  padding: 14px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.timer-card {
+  text-align: center;
+  border-color: var(--color-accent);
+}
+
+.timer-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.timer-title {
+  font-weight: 600;
+}
+
+.timer-time {
+  font-size: 2.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums; /* digits keep their width so the clock doesn't jiggle */
+  margin: 4px 0 12px;
+}
+
+.timer-card .form-buttons {
+  justify-content: center;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field input {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  max-width: 100%;
+}
+
+.back {
+  padding-left: 0;
+}
+
+.period {
+  font-size: 0.75rem;
+}
+
+.overall-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.segments {
+  display: flex;
+  gap: 4px; /* a surface gap between the child goals */
+}
+
+.segment {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--color-ring-track);
+  overflow: hidden;
+}
+
+.segment-fill {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+}
+
+/* Long titles wrap instead of spilling over their neighbours */
+.ring,
+.ring-title,
+.timer-title,
+.list li .grow,
+.overall-head strong,
+.children label,
+.goal-chart-title {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* The darkest heatmap cells need light text to stay readable */
+.heat-cell[data-level='4'] {
+  color: var(--color-on-dark);
+}
+
+/* A bigger tick target for the to-do checkboxes */
+.list li > input[type='checkbox'] {
+  width: 26px;
+  height: 26px;
+  margin: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* A calm notice, not an alarm */
+.notice {
+  max-width: 448px;
+  width: calc(100% - 32px);
+  margin: 16px auto 0;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: 0.9rem;
+}
+
+.toast span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast button {
+  flex: none;
+}
+
+/* Header: a bead for every win finished today */
+.header-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.beads-strip {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.beads {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bead {
+  display: block;
+  width: 22px; /* a comfortable tap target on a phone */
+  height: 22px;
+  border: 3px solid var(--color-surface); /* the visible bead is a smaller disc inside */
+  border-radius: 50%;
+  background-clip: padding-box;
+  padding: 0;
+}
+
+.bead.selected {
+  outline: 2px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+.beads-caption {
+  min-height: 1.2em;
+}
+
+/* Name suggestions under a text box */
+.suggest {
+  position: relative;
+}
+
+.suggest > input {
+  width: 100%;
+}
+
+.suggest-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-pop);
+}
+
+.suggest-list li {
+  display: flex;
+  align-items: center;
+  min-height: 44px; /* a comfortable tap target */
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.suggest-list li.active,
+.suggest-list li:hover {
+  background: var(--color-bg);
+}
+
+/* The offer to update earlier wins after editing a quick win */
+.offer {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+}
+
+.offer p {
+  margin: 0 0 8px;
+}
+
+.beads-caption .link {
+  margin-left: 8px;
+  padding: 2px 6px;
+}
+
+/* Buttons on a finished (struck-through) row stay readable */
+.list li.done button {
+  text-decoration: none;
+}
+
+/* Beads stay small to look at but get a bigger area to tap */
+.bead {
+  position: relative;
+}
+
+.bead::after {
+  content: '';
+  position: absolute;
+  inset: -11px; /* measured from inside the 3px border: about a 38px tap area around a 22px bead */
+}
+
+.beads-caption .link {
+  padding: 10px 8px;
+  margin: -8px 0;
+}

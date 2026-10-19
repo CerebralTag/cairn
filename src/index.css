@@ -1,0 +1,68 @@
+/* Theme: every colour in the app comes from a variable defined here.
+   To re-skin the app (or add dark mode later), change values in this file only. */
+:root {
+  --color-bg: #faf8f5;
+  --color-surface: #ffffff;
+  --color-border: #e8e3dc;
+  --color-text: #2b2723;
+  --color-text-muted: #716a62; /* 5:1 on the page background */
+  --color-on-dark: #faf8f5; /* text on the darkest fills */
+  --color-bead-neutral: #8f877e; /* a win with no area */
+  --shadow-pop: 0 6px 18px rgba(43, 39, 35, 0.12); /* menus that float over the page */
+  --color-accent: #3f7d6b;
+  --color-accent-text: #ffffff;
+  --color-ring-track: #ece7e0;
+
+  /* Categorical palette for areas, in a fixed order. Validated for colour-blind
+     separation and contrast: keep this order, and don't add an 8th colour. */
+  --palette-1: #8b6bb8;
+  --palette-2: #d9774a;
+  --palette-3: #4a7fb5;
+  --palette-4: #2a9d78;
+  --palette-5: #b58a1f;
+  --palette-6: #c2527f;
+  --palette-7: #1f93b8;
+
+  /* Heatmap: one hue, light to dark = more wins that day */
+  --heat-0: #ece7e0;
+  --heat-1: #cfe6dc;
+  --heat-2: #9fd0bd;
+  --heat-3: #5fae93;
+  --heat-4: #2f7f67;
+
+  --radius: 14px;
+  --space: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%; /* stop iOS resizing text when rotating */
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation; /* no double-tap-to-zoom delay on taps */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Big enough to hit with a thumb */
+input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--color-accent);
+}

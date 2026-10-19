@@ -1,0 +1,163 @@
+import { useState } from 'react'
+import { positiveNumber } from '../limits'
+import { PERIOD_WORDS, currentTarget, formatMinutes, isActive, withTarget } from '../goals'
+import type { Area, GoalDef, GoalPeriod } from '../types'
+import { AreaChips } from './AreaChips'
+
+type GoalType = 'time' | 'count' | 'amount' | 'overarching'
+
+type Props = {
+  initial?: GoalDef // present = editing
+  allGoals: GoalDef[]
+  onSave: (goal: GoalDef, backfill: boolean) => void
+  onCancel: () => void
+}
+
+function typeOf(goal: GoalDef): GoalType {
+  return goal.childIds ? 'overarching' : (goal.kind as 'time' | 'count' | 'amount')
+}
+
+// Title, areas, target and included goals can all be edited. The type (time vs
+// count) and the period (day, week, month) are fixed once created, because past
+// targets are stored in that unit and length.
+// Editing areas is safe: progress comes from explicit links, not from areas.
+export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
+  const now = new Date()
+  const editing = initial !== undefined
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [type, setType] = useState<GoalType>(initial ? typeOf(initial) : 'time')
+  const [period, setPeriod] = useState<GoalPeriod>(initial?.period ?? 'week')
+  const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
+  const [backfill, setBackfill] = useState(true)
+  const [amount, setAmount] = useState(() => {
+    if (!initial || initial.childIds) return ''
+    const target = currentTarget(initial, now)
+    return String(initial.kind === 'time' ? target / 60 : target)
+  })
+  const [childIds, setChildIds] = useState<string[]>(initial?.childIds ?? [])
+
+  // An overarching goal can only include goals that repeat on the same schedule as it.
+  const candidates = allGoals.filter((g) => !g.childIds && g.id !== initial?.id && isActive(g) && g.period === period)
+  const parsed = positiveNumber(amount) ?? 0 // 0 means "not a usable number"
+  const valid =
+    title.trim() !== '' &&
+    (type === 'overarching' ? childIds.length > 0 : parsed > 0)
+
+  function toggleArea(area: Area) {
+    setAreas(areas.includes(area) ? areas.filter((a) => a !== area) : [...areas, area])
+  }
+
+  function toggleChild(id: string) {
+    setChildIds(childIds.includes(id) ? childIds.filter((c) => c !== id) : [...childIds, id])
+  }
+
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!valid) return
+
+    if (type === 'overarching') {
+      onSave(
+        {
+          ...(initial ?? { id: crypto.randomUUID(), kind: 'completion' as const, period, targets: [] }),
+          title: title.trim(),
+          areas,
+          childIds,
+        },
+        false,
+      )
+      return
+    }
+
+    // Time targets are typed in hours but stored as minutes.
+    const target = type === 'time' ? Math.round(parsed * 60) : Math.round(parsed)
+    const base: GoalDef = initial ?? { id: crypto.randomUUID(), title: '', areas: [], kind: type, period, targets: [] }
+    const updated: GoalDef = {
+      ...base,
+      title: title.trim(),
+      areas,
+    }
+    // Only changed when the target differs, so unrelated edits don't add history rows.
+    const unchanged = initial && currentTarget(initial, now) === target
+    const linkExisting = !editing && backfill && areas.length > 0
+    onSave(unchanged ? updated : withTarget(updated, target, now), linkExisting)
+  }
+
+  return (
+    <form className="card form" onSubmit={handleSubmit}>
+      <input autoFocus placeholder="Goal name" aria-label="Goal name" value={title} onChange={(e) => setTitle(e.target.value)} />
+
+      <div className="two-up">
+        <select value={type} disabled={editing} onChange={(e) => setType(e.target.value as GoalType)} aria-label="Goal type">
+          <option value="time">Time</option>
+          <option value="count">Count</option>
+          <option value="amount">Amount (adds up a number, like 100)</option>
+          <option value="overarching">Overarching (all its goals met)</option>
+        </select>
+        <select
+          value={period}
+          disabled={editing}
+          aria-label="How often"
+          onChange={(e) => {
+            setPeriod(e.target.value as GoalPeriod)
+            setChildIds([]) // the included goals must match the new schedule
+          }}
+        >
+          <option value="day">Per day</option>
+          <option value="week">Per week</option>
+          <option value="month">Per month</option>
+        </select>
+      </div>
+
+      <div className="muted">Areas (label and colour)</div>
+      <AreaChips value={areas} onToggle={toggleArea} />
+
+      {type !== 'overarching' && (
+        <>
+          <input
+            type="number"
+            min="0"
+            step={type === 'time' ? '0.25' : '1'}
+            placeholder={type === 'time' ? `Hours ${PERIOD_WORDS[period].per}` : type === 'amount' ? `Amount ${PERIOD_WORDS[period].per}` : `Times ${PERIOD_WORDS[period].per}`}
+            aria-label="Target"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          {editing && initial && (
+            <p className="muted">
+              Target changes apply from {PERIOD_WORDS[period].this}; earlier periods keep their old target (now{' '}
+              {initial.kind === 'time' ? formatMinutes(currentTarget(initial, now)) : currentTarget(initial, now)}).
+            </p>
+          )}
+          {!editing && areas.length > 0 && (
+            <label className="check-row">
+              <input type="checkbox" checked={backfill} onChange={(e) => setBackfill(e.target.checked)} />
+              Link my existing entries in these areas
+            </label>
+          )}
+        </>
+      )}
+
+      {type === 'overarching' && (
+        <fieldset className="children">
+          <legend className="muted">Included goals</legend>
+          {candidates.length === 0 && <p className="muted">No {{ day: 'daily', week: 'weekly', month: 'monthly' }[period]} goals to include yet.</p>}
+          {candidates.map((g) => (
+            <label key={g.id}>
+              <input type="checkbox" checked={childIds.includes(g.id)} onChange={() => toggleChild(g.id)} />
+              {g.title}
+            </label>
+          ))}
+        </fieldset>
+      )}
+
+      <div className="form-buttons">
+        <button type="submit" className="primary" disabled={!valid}>
+          Save
+        </button>
+        <button type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
