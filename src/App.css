@@ -439,6 +439,16 @@
   color: var(--color-accent);
 }
 
+.measure {
+  display: flex;
+  gap: 6px;
+}
+
+.measure input {
+  flex: 1;
+  min-width: 0;
+}
+
 .chip-pair {
   display: inline-flex;
 }

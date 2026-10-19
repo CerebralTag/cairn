@@ -32,8 +32,14 @@ export function TimerStarter({ goals, tasks, onStart, onCancel }: Props) {
       return
     }
     setAreas([...areas, area])
-    const suggested = leafGoals.filter((g) => g.areas.includes(area)).map((g) => g.id)
-    setGoalIds([...new Set([...goalIds, ...suggested])])
+  }
+
+  // Ticking a goal adds its areas; unticking leaves them.
+  function toggleGoal(id: string) {
+    if (goalIds.includes(id)) return setGoalIds(goalIds.filter((x) => x !== id))
+    setGoalIds([...goalIds, id])
+    const goalAreas = leafGoals.find((g) => g.id === id)?.areas ?? []
+    setAreas([...new Set([...areas, ...goalAreas])])
   }
 
   function pickSuggestion(s: Suggestion) {
@@ -77,7 +83,7 @@ export function TimerStarter({ goals, tasks, onStart, onCancel }: Props) {
                   <input
                     type="checkbox"
                     checked={goalIds.includes(g.id)}
-                    onChange={() => setGoalIds(goalIds.includes(g.id) ? goalIds.filter((x) => x !== g.id) : [...goalIds, g.id])}
+                    onChange={() => toggleGoal(g.id)}
                   />
                   {g.title}
                 </label>

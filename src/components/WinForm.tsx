@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import type { WinValues } from '../edits'
 import { isLinkable } from '../goals'
-import { MAX_NUMBER, positiveNumber } from '../limits'
+import { positiveNumber } from '../limits'
 import { parseDateTimeInput, toDateTimeInput } from '../dates'
 import type { Area, GoalDef } from '../types'
 import type { Suggestion } from '../suggest'
 import { AreaChips } from './AreaChips'
+import { MeasureField, type Measure } from './MeasureField'
 import { TitleInput } from './TitleInput'
 
 export type { WinValues }
@@ -22,8 +23,7 @@ type Props = {
 }
 
 // Used for logging an ad-hoc win, adding a to-do, and editing either. Areas and
-// goals are independent, optional links; picking an area just pre-ticks the
-// goals in that area to save taps.
+// goals are independent, optional links; ticking a goal adds its areas (never the reverse).
 export function WinForm({
   goals,
   initial,
@@ -38,9 +38,8 @@ export function WinForm({
   const [title, setTitle] = useState(initial?.title ?? '')
   const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
   const [goalIds, setGoalIds] = useState<string[]>(initial?.goalIds ?? [])
-  const [minutes, setMinutes] = useState('')
   const [when, setWhen] = useState(toDateTimeInput(initial?.at ?? now))
-  const [amount, setAmount] = useState(initial?.amount ? String(initial.amount) : '')
+  const [measure, setMeasure] = useState<Measure>({ kind: initial?.amount ? 'number' : 'time', value: initial?.amount ? String(initial.amount) : '' })
   const [error, setError] = useState<string | null>(null)
 
   const leafGoals = goals.filter(isLinkable)
@@ -51,8 +50,6 @@ export function WinForm({
       return
     }
     setAreas([...areas, area])
-    const suggested = leafGoals.filter((g) => g.areas.includes(area)).map((g) => g.id)
-    setGoalIds([...new Set([...goalIds, ...suggested])])
   }
 
   // Picking a name you've used before fills in what you chose then, but never over
@@ -61,11 +58,15 @@ export function WinForm({
     setTitle(s.title)
     if (areas.length === 0 && s.areas.length > 0) setAreas(s.areas)
     if (goalIds.length === 0 && s.goalIds.length > 0) setGoalIds(s.goalIds)
-    if (amount === '' && s.amount !== undefined) setAmount(String(s.amount))
+    if (measure.value === '' && s.amount !== undefined) setMeasure({ kind: 'number', value: String(s.amount) })
   }
 
+  // Ticking a goal adds its areas; unticking leaves them (you may have chosen them yourself).
   function toggleGoal(id: string) {
-    setGoalIds(goalIds.includes(id) ? goalIds.filter((g) => g !== id) : [...goalIds, id])
+    if (goalIds.includes(id)) return setGoalIds(goalIds.filter((g) => g !== id))
+    setGoalIds([...goalIds, id])
+    const goalAreas = leafGoals.find((g) => g.id === id)?.areas ?? []
+    setAreas([...new Set([...areas, ...goalAreas])])
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -81,8 +82,9 @@ export function WinForm({
       at = parsedWhen
     }
 
-    const parsedMinutes = positiveNumber(minutes)
-    const parsedAmount = positiveNumber(amount)
+    const parsed = positiveNumber(measure.value)
+    const parsedMinutes = withMinutes && measure.kind === 'time' ? parsed : undefined
+    const parsedAmount = measure.kind === 'number' || !withMinutes ? parsed : undefined
     onSave({
       title: title.trim(),
       areas,
@@ -127,26 +129,8 @@ export function WinForm({
         </fieldset>
       )}
 
-      <input
-        type="number"
-        min="1"
-        max={MAX_NUMBER}
-        placeholder="Amount (optional, like 10)"
-        aria-label="Amount"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
-
-      {withMinutes && (
-        <input
-          type="number"
-          min="1"
-          max={MAX_NUMBER}
-          placeholder="Minutes (optional)" aria-label="Minutes (optional)"
-          value={minutes}
-          onChange={(e) => setMinutes(e.target.value)}
-        />
-      )}
+      {/* A to-do has no time of its own (sessions are added later), so it only offers a number. */}
+      <MeasureField measure={measure} onChange={setMeasure} numberOnly={!withMinutes} />
 
       {error && (
         <p className="muted" role="alert">

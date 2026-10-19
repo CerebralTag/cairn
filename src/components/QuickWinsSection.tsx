@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { formatMinutes, goalSource, isLinkable, startOfWeek } from '../goals'
-import { MAX_NUMBER, positiveNumber } from '../limits'
+import { positiveNumber } from '../limits'
 import { useAreas } from '../areasContext'
 import { templateHasDetails, winsNamed } from '../quickWins'
 import type { Area, GoalDef, QuickWin, Win } from '../types'
 import { AreaChips } from './AreaChips'
+import { MeasureField, type Measure } from './MeasureField'
 
 type Props = {
   quickWins: QuickWin[]
@@ -34,8 +35,12 @@ function QuickWinForm({
   onCancel: () => void
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
-  const [amount, setAmount] = useState(initial?.amount ? String(initial.amount) : '')
-  const [minutes, setMinutes] = useState(initial?.minutes ? String(initial.minutes) : '')
+  // One number: a plain amount if the template has one, otherwise minutes.
+  const [measure, setMeasure] = useState<Measure>(
+    initial?.amount
+      ? { kind: 'number', value: String(initial.amount) }
+      : { kind: 'time', value: initial?.minutes ? String(initial.minutes) : '' },
+  )
   const [askMinutes, setAskMinutes] = useState(initial?.askMinutes ?? false)
   const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
   const [goalIds, setGoalIds] = useState<string[]>(initial?.goalIds ?? [])
@@ -43,11 +48,20 @@ function QuickWinForm({
   // Archived goals aren't offered, but one this quick win is already linked to stays visible.
   const leafGoals = goals.filter((g) => isLinkable(g) || (!g.childIds && goalSourceIsLinked(g) && initial?.goalIds.includes(g.id)))
 
+  // Ticking a goal adds its areas; unticking leaves them.
+  function toggleGoal(id: string) {
+    if (goalIds.includes(id)) return setGoalIds(goalIds.filter((x) => x !== id))
+    setGoalIds([...goalIds, id])
+    const goalAreas = leafGoals.find((g) => g.id === id)?.areas ?? []
+    setAreas([...new Set([...areas, ...goalAreas])])
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (title.trim() === '') return
-    const parsedAmount = positiveNumber(amount)
-    const parsedMinutes = positiveNumber(minutes)
+    const parsed = positiveNumber(measure.value)
+    const parsedAmount = measure.kind === 'number' ? parsed : undefined
+    const parsedMinutes = measure.kind === 'time' ? parsed : undefined
     onSave({
       id: initial?.id ?? crypto.randomUUID(),
       title: title.trim(),
@@ -64,15 +78,7 @@ function QuickWinForm({
     <form className="card form" onSubmit={handleSubmit}>
       <input autoFocus placeholder="Name (e.g. 10 squats, Woodshop)" aria-label="Name (e.g. 10 squats, Woodshop)" value={title} onChange={(e) => setTitle(e.target.value)} />
 
-      <input
-        type="number"
-        min="1"
-        max={MAX_NUMBER}
-        placeholder="Amount (optional, like 10)"
-        aria-label="Amount"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
+      <MeasureField measure={measure} onChange={setMeasure} />
       <p className="muted">
         Tick a goal below and this adds to it each time. An amount goal adds the amounts up.
       </p>
@@ -88,7 +94,7 @@ function QuickWinForm({
               <input
                 type="checkbox"
                 checked={goalIds.includes(g.id)}
-                onChange={() => setGoalIds(goalIds.includes(g.id) ? goalIds.filter((x) => x !== g.id) : [...goalIds, g.id])}
+                onChange={() => toggleGoal(g.id)}
               />
               {g.title}
             </label>
@@ -96,7 +102,6 @@ function QuickWinForm({
         </fieldset>
       )}
 
-      <input type="number" min="1" placeholder="Minutes (optional)" aria-label="Minutes (optional)" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
       <label className="check-row">
         <input type="checkbox" checked={askMinutes} onChange={(e) => setAskMinutes(e.target.checked)} />
         Ask how long each time
