@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { isActive } from '../goals'
+import { isLinkable } from '../goals'
 import type { TimerInput } from '../timer'
 import type { Area, GoalDef, Win } from '../types'
 import type { Suggestion } from '../suggest'
@@ -23,7 +23,7 @@ export function TimerStarter({ goals, tasks, onStart, onCancel }: Props) {
   const [areas, setAreas] = useState<Area[]>([])
   const [goalIds, setGoalIds] = useState<string[]>([])
 
-  const leafGoals = goals.filter((g) => !g.childIds && isActive(g))
+  const leafGoals = goals.filter(isLinkable)
   const task = tasks.find((t) => t.id === taskId)
 
   function toggleArea(area: Area) {

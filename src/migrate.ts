@@ -33,6 +33,7 @@ export function migrateLegacy(legacy: LegacyData, now: Date): AppData {
       completedAt: old.at,
       goalIds: goalIdsFor(old.area),
       areas: [old.area],
+      origin: 'logged',
     })
     if (old.minutes && old.minutes > 0) {
       timeEntries.push({
@@ -56,6 +57,7 @@ export function migrateLegacy(legacy: LegacyData, now: Date): AppData {
       completedAt: old.done ? now : undefined,
       goalIds: goalIdsFor(old.area),
       areas: old.area ? [old.area] : [],
+      origin: 'todo',
     })
   }
 

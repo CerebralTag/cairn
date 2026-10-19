@@ -55,3 +55,12 @@ describe('migrateLegacy', () => {
     expect(progressFor(guitar, migrated, MON)).toMatchObject({ done: 90, fraction: 0.75 })
   })
 })
+
+describe('migrated tasks keep their origin', () => {
+  const migrated = migrateLegacy(legacy, NOW)
+  it('old wins are logged, old to-dos are to-dos', () => {
+    expect(migrated.wins.find((w) => w.id === 'w1')?.origin).toBe('logged')
+    expect(migrated.wins.find((w) => w.id === 't1')?.origin).toBe('todo')
+    expect(migrated.wins.find((w) => w.id === 't2')?.origin).toBe('todo')
+  })
+})

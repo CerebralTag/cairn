@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { WinValues } from '../edits'
-import { isActive } from '../goals'
+import { isLinkable } from '../goals'
 import { MAX_NUMBER, positiveNumber } from '../limits'
 import { parseDateTimeInput, toDateTimeInput } from '../dates'
 import type { Area, GoalDef } from '../types'
@@ -43,7 +43,7 @@ export function WinForm({
   const [amount, setAmount] = useState(initial?.amount ? String(initial.amount) : '')
   const [error, setError] = useState<string | null>(null)
 
-  const leafGoals = goals.filter((g) => !g.childIds && isActive(g))
+  const leafGoals = goals.filter(isLinkable)
 
   function toggleArea(area: Area) {
     if (areas.includes(area)) {

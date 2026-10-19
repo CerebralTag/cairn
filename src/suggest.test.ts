@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_AREAS } from './areas'
 import { buildSuggestionPool, makeSuggest, matchSuggestions, nameKey } from './suggest'
 import { winsNamed } from './quickWins'
+import type { GoalDef } from './types'
 import { amountWin, data, doneWin, guitar, session, squats, todo, workouts } from './testHelpers'
 import type { QuickWin } from './types'
 
@@ -162,5 +163,16 @@ describe('names that differ only by a symbol are different names', () => {
   it('does not bulk-apply a template to a differently-named win', () => {
     const cpp = doneWin(at(10), { title: 'C++' })
     expect(winsNamed([cpp, doneWin(at(11), { title: 'C#' }), doneWin(at(12), { title: 'C' })], 'C#').map((w) => w.title)).toEqual(['C#'])
+  })
+})
+
+describe('rule-based goals are never suggested or ticked', () => {
+  const rule: GoalDef = { id: 'r', title: 'Do 10 things', areas: ['health'], kind: 'count', period: 'week', source: 'any', targets: [] }
+
+  it('does not offer a goal that counts by a rule, and drops it from a win\'s remembered goals', () => {
+    const win = doneWin(at(10), { title: 'Run', goalIds: ['r', 'workouts'] })
+    const pool = buildSuggestionPool(withAreas(data([rule, workouts], [win])))
+    expect(pool.map((p) => p.title).sort()).toEqual(['Run', 'Workouts']) // the rule goal's own title is absent
+    expect(pool.find((p) => p.title === 'Run')?.goalIds).toEqual(['workouts'])
   })
 })

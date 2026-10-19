@@ -1,8 +1,13 @@
 // Small builders so tests read as scenarios, not boilerplate.
-import type { AppData, Area, AreaDef, GoalDef, QuickWin, TimeEntry, Win } from './types'
+import type { AppData, Area, AreaDef, GoalDef, QuickWin, TimeEntry, Win, WinOrigin } from './types'
 
-export function doneWin(at: Date, opts: { id?: string; goalIds?: string[]; areas?: Area[]; title?: string } = {}): Win {
+export function doneWin(
+  at: Date,
+  opts: { id?: string; goalIds?: string[]; areas?: Area[]; title?: string; origin?: WinOrigin; quickWinId?: string } = {},
+): Win {
   return {
+    origin: opts.origin,
+    quickWinId: opts.quickWinId,
     id: opts.id ?? crypto.randomUUID(),
     title: opts.title ?? 'x',
     status: 'done',

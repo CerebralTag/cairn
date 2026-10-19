@@ -2,7 +2,7 @@
 // appear; picking one fills in what you chose last time (areas, goals, amount). A name
 // that matches a goal's own name also ticks that goal. There is no unit or measure to
 // define: the name is the link.
-import { isActive } from './goals'
+import { isLinkable } from './goals'
 import type { AppData, Area } from './types'
 
 export type Suggestion = {
@@ -45,7 +45,8 @@ const unique = <T>(items: T[]) => [...new Set(items)]
 // Every name worth suggesting, one entry per name (case and spacing ignored), carrying
 // the details from its most recent use. Built once per change of data, then queried.
 export function buildSuggestionPool(data: AppData): Pooled[] {
-  const activeGoalIds = new Set(data.goals.filter((g) => !g.childIds && isActive(g)).map((g) => g.id))
+  // Only goals you tag things to are suggested; rule-based goals count by themselves.
+  const activeGoalIds = new Set(data.goals.filter(isLinkable).map((g) => g.id))
   const areaIds = new Set(data.areas.map((a) => a.id))
   const pool = new Map<string, Pooled>()
 
@@ -76,7 +77,7 @@ export function buildSuggestionPool(data: AppData): Pooled[] {
 
   // Matching by name: a name equal to an active goal's name ticks that goal and takes its areas.
   for (const g of data.goals) {
-    if (g.childIds || !isActive(g)) continue
+    if (!isLinkable(g)) continue
     const key = nameKey(g.title)
     const existing = pool.get(key)
     if (existing) {

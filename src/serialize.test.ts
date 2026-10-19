@@ -226,3 +226,25 @@ describe('serializeChecked (never write what could not be loaded again)', () => 
     expect(() => serializeChecked(bad)).toThrow(/can't store/)
   })
 })
+
+describe('task origin and goal rules survive saving and are validated', () => {
+  const good = () => JSON.parse(serialize(sample)) as Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  it('round-trips origin, quickWinId and a goal rule', () => {
+    const withExtras = {
+      ...sample,
+      goals: [{ ...guitar, source: 'any' as const }],
+      wins: [{ ...sample.wins[0], origin: 'quick' as const, quickWinId: 'q1' }, { ...sample.wins[1], origin: 'todo' as const }],
+    }
+    expect(deserialize(serialize(withExtras))).toEqual(withExtras)
+  })
+
+  it('rejects an unknown rule or origin instead of loading it', () => {
+    const a = good()
+    a.goals[0].source = 'sometimes'
+    expect(() => deserialize(JSON.stringify(a))).toThrow(/damaged/)
+    const b = good()
+    b.wins[0].origin = 'imported'
+    expect(() => deserialize(JSON.stringify(b))).toThrow(/damaged/)
+  })
+})

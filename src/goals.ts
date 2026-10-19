@@ -1,6 +1,6 @@
 // Goal math. Pure functions: data in, result out, no React, no storage.
 // Period results are always calculated from entries, never stored.
-import type { Area, AppData, GoalDef, GoalPeriod, GoalProgress, TimeEntry, Win } from './types'
+import type { Area, AppData, GoalDef, GoalPeriod, GoalProgress, GoalSource, TimeEntry, Win } from './types'
 
 export function addDays(date: Date, days: number): Date {
   const result = new Date(date)
@@ -46,6 +46,16 @@ export const PERIOD_WORDS: Record<GoalPeriod, { per: string; this: string }> = {
 
 export function isActive(goal: GoalDef): boolean {
   return goal.archivedAt === undefined
+}
+
+export function goalSource(goal: GoalDef): GoalSource {
+  return goal.source ?? 'linked'
+}
+
+// A goal you tag things to. Goals that count by a rule need no tags, so they are not
+// offered in the "Counts toward" lists, and overarching goals only combine other goals.
+export function isLinkable(goal: GoalDef): boolean {
+  return !goal.childIds && isActive(goal) && goalSource(goal) === 'linked'
 }
 
 // The target in effect for the period starting at `periodStart`: the latest
@@ -122,6 +132,20 @@ export function childrenFor(goal: GoalDef, allGoals: GoalDef[], periodStart: Dat
     .filter((g): g is GoalDef => g !== undefined && !archivedBefore(g, periodStart))
 }
 
+// Whether a finished win counts toward a count/amount goal under that goal's rule.
+export function countsToward(goal: GoalDef, win: Win): boolean {
+  switch (goalSource(goal)) {
+    case 'any':
+      return true
+    case 'todo':
+      return win.origin === 'todo'
+    case 'quick':
+      return win.origin === 'quick'
+    default:
+      return win.goalIds.includes(goal.id)
+  }
+}
+
 // Progress for the period (of the goal's own length) starting at `periodStart`.
 export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): GoalProgress {
   if (archivedBefore(goal, periodStart)) return { done: 0, target: 0, fraction: 0, met: false }
@@ -142,21 +166,24 @@ export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): Go
   const end = periodEnd(goal.period, periodStart).getTime()
   const inPeriod = (d: Date) => d.getTime() >= start && d.getTime() < end
 
+  const source = goalSource(goal)
   let done: number
   if (goal.kind === 'time') {
-    // Time goals add up the minutes of linked time entries, when they happened.
+    // Time goals add up minutes, when they happened: all time logged for 'any', otherwise
+    // only the entries linked to the goal (directly or through their task).
     const byId = winsById(data.wins)
     done = data.timeEntries
-      .filter((e) => inPeriod(e.at) && entryGoalIds(e, byId).includes(goal.id))
+      .filter((e) => inPeriod(e.at) && (source === 'any' || entryGoalIds(e, byId).includes(goal.id)))
       .reduce((sum, e) => sum + e.minutes, 0)
   } else {
-    // Count, completion and amount goals use the wins linked to them, in the period they
-    // were finished. A count goal counts each one once; an amount goal adds up their
-    // amounts (a linked win with no amount counts as 1).
-    const linked = data.wins.filter(
-      (w) => w.status === 'done' && w.completedAt && inPeriod(w.completedAt) && w.goalIds.includes(goal.id),
+    // Count, completion and amount goals use finished wins, in the period they were finished.
+    // Which ones depends on the goal's rule: every finished task, only to-dos, only quick-win
+    // taps, or just those linked to it. A count goal counts each once; an amount goal adds up
+    // their amounts (a win with no amount counts as 1).
+    const counted = data.wins.filter(
+      (w) => w.status === 'done' && w.completedAt && inPeriod(w.completedAt) && countsToward(goal, w),
     )
-    done = goal.kind === 'amount' ? linked.reduce((sum, w) => sum + (w.amount ?? 1), 0) : linked.length
+    done = goal.kind === 'amount' ? counted.reduce((sum, w) => sum + (w.amount ?? 1), 0) : counted.length
   }
 
   return {
@@ -178,6 +205,8 @@ export function linkByArea(goal: GoalDef, data: AppData): Pick<AppData, 'wins' |
   const overlaps = (areas: Area[]) => areas.some((a) => goal.areas.includes(a))
   const byId = winsById(data.wins)
   const takesWin = (w: Win) => goal.kind !== 'amount' || w.amount !== undefined
+  // Rule-based goals count automatically, so there is nothing to link.
+  if (goalSource(goal) !== 'linked') return { wins: data.wins, timeEntries: data.timeEntries }
   return {
     wins: data.wins.map((w) =>
       !w.goalIds.includes(goal.id) && takesWin(w) && overlaps(winAreas(w, data.goals))

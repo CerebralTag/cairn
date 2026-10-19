@@ -16,6 +16,13 @@ export type AreaDef = { id: Area; name: string; colour: number }
 
 export type WinStatus = 'todo' | 'doing' | 'done' | 'dropped'
 
+// How a task came to exist. Tasks are one kind of object; this says which way it was made:
+//  - 'todo':   planned first as a to-do, then worked and finished (one-off)
+//  - 'quick':  tapped from a quick-win template (repeatable); `quickWinId` says which one
+//  - 'logged': recorded already done with "I did something" (one-off)
+// Tasks saved before this existed have no origin; they count as "anything I finish" only.
+export type WinOrigin = 'todo' | 'quick' | 'logged'
+
 // "Task" and "win" are one record. A pre-logged to-do starts as 'todo' with no
 // completedAt; an ad-hoc win is created already 'done'. `completedAt` is the
 // timestamp History and count goals use.
@@ -30,6 +37,8 @@ export type Win = {
   // How much, as a plain number ("10"). No unit: the title says what it was. An amount
   // goal that this win is linked to adds the amounts up (a win with none counts as 1).
   amount?: number
+  origin?: WinOrigin
+  quickWinId?: string // the quick win this was tapped from, when origin is 'quick'
 }
 
 // The only place minutes live. Attached to a task (winId) or standalone.
@@ -54,6 +63,13 @@ export type GoalKind = 'time' | 'count' | 'completion' | 'amount'
 // number of completed wins otherwise.
 export type GoalTarget = { from: Date; amount: number }
 
+// What a goal counts. 'linked' (the default) counts only what you have tagged to the goal.
+// The others are rules that count automatically, with nothing to tag:
+//  - 'any':   count goals: every finished task; time goals: all time logged
+//  - 'todo':  count goals: every to-do you finish
+//  - 'quick': count goals: every quick-win tap
+export type GoalSource = 'linked' | 'any' | 'todo' | 'quick'
+
 export type GoalDef = {
   id: string
   title: string
@@ -63,6 +79,7 @@ export type GoalDef = {
   childIds?: string[] // set => overarching goal, met when ALL children are met (same period as it)
   period: GoalPeriod // how often the target repeats
   archivedAt?: Date // archived goals stop appearing, but their past periods keep their results
+  source?: GoalSource // what counts toward it; absent means 'linked'
 }
 
 // Calculated from entries, never stored.

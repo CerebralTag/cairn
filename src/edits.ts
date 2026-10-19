@@ -36,6 +36,7 @@ export function addLoggedWin(data: AppData, values: WinValues, now: Date): AppDa
         goalIds: values.goalIds,
         areas: values.areas,
         amount: values.amount,
+        origin: 'logged',
       },
       ...data.wins,
     ],
@@ -59,6 +60,7 @@ export function addTask(data: AppData, values: WinValues, now: Date): AppData {
         goalIds: values.goalIds,
         areas: values.areas,
         amount: values.amount,
+        origin: 'todo',
       },
     ],
   }

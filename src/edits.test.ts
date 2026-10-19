@@ -97,3 +97,16 @@ describe('applyEntryEdit and deleteEntry', () => {
     expect(d.timeEntries).toEqual([other])
   })
 })
+
+describe('where a task came from is remembered', () => {
+  it('a to-do is made as a to-do, and keeps that when it is finished', () => {
+    const added = addTask(data([]), { title: 'Fix shelf', areas: [], goalIds: [] }, NOW)
+    expect(added.wins[0].origin).toBe('todo')
+    const finished = { ...added, wins: [{ ...added.wins[0], status: 'done' as const, completedAt: NOW }] }
+    expect(applyWinEdit(finished, finished.wins[0].id, { title: 'Fixed shelf', areas: [], goalIds: [] }).wins[0].origin).toBe('todo')
+  })
+
+  it('a win logged after the fact is marked as logged', () => {
+    expect(addLoggedWin(data([]), { title: 'Scales', areas: [], goalIds: [] }, NOW).wins[0].origin).toBe('logged')
+  })
+})

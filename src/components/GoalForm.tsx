@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { positiveNumber } from '../limits'
 import { PERIOD_WORDS, currentTarget, formatMinutes, isActive, withTarget } from '../goals'
-import type { Area, GoalDef, GoalPeriod } from '../types'
+import type { Area, GoalDef, GoalPeriod, GoalSource } from '../types'
 import { AreaChips } from './AreaChips'
 
 type GoalType = 'time' | 'count' | 'amount' | 'overarching'
@@ -27,6 +27,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [type, setType] = useState<GoalType>(initial ? typeOf(initial) : 'time')
   const [period, setPeriod] = useState<GoalPeriod>(initial?.period ?? 'week')
+  const [source, setSource] = useState<GoalSource>(initial?.source ?? 'linked')
   const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
   const [backfill, setBackfill] = useState(true)
   const [amount, setAmount] = useState(() => {
@@ -71,14 +72,17 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
     // Time targets are typed in hours but stored as minutes.
     const target = type === 'time' ? Math.round(parsed * 60) : Math.round(parsed)
     const base: GoalDef = initial ?? { id: crypto.randomUUID(), title: '', areas: [], kind: type, period, targets: [] }
+    // 'linked' is the default and is stored as no value at all. Amount goals always count linked wins.
+    const rule: GoalSource = type === 'count' || type === 'time' ? source : 'linked'
     const updated: GoalDef = {
       ...base,
       title: title.trim(),
       areas,
+      source: rule === 'linked' ? undefined : rule,
     }
     // Only changed when the target differs, so unrelated edits don't add history rows.
     const unchanged = initial && currentTarget(initial, now) === target
-    const linkExisting = !editing && backfill && areas.length > 0
+    const linkExisting = !editing && backfill && areas.length > 0 && rule === 'linked'
     onSave(unchanged ? updated : withTarget(updated, target, now), linkExisting)
   }
 
@@ -87,7 +91,15 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
       <input autoFocus placeholder="Goal name" aria-label="Goal name" value={title} onChange={(e) => setTitle(e.target.value)} />
 
       <div className="two-up">
-        <select value={type} disabled={editing} onChange={(e) => setType(e.target.value as GoalType)} aria-label="Goal type">
+        <select
+          value={type}
+          disabled={editing}
+          onChange={(e) => {
+            setType(e.target.value as GoalType)
+            setSource('linked') // the choices differ by type, so start from the default
+          }}
+          aria-label="Goal type"
+        >
           <option value="time">Time</option>
           <option value="count">Count</option>
           <option value="amount">Amount (adds up a number, like 100)</option>
@@ -107,6 +119,33 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
           <option value="month">Per month</option>
         </select>
       </div>
+
+      {(type === 'count' || type === 'time') && (
+        <label className="field">
+          <span className="muted">What counts</span>
+          <select
+            value={source}
+            disabled={editing}
+            aria-label="What counts"
+            onChange={(e) => setSource(e.target.value as GoalSource)}
+          >
+            {type === 'count' ? (
+              <>
+                <option value="linked">Tasks I link to it</option>
+                <option value="any">Anything I finish</option>
+                <option value="todo">To-dos I finish</option>
+                <option value="quick">Quick wins I tap</option>
+              </>
+            ) : (
+              <>
+                <option value="linked">Time on things I link to it</option>
+                <option value="any">All the time I log</option>
+              </>
+            )}
+          </select>
+          {editing && <span className="muted">Fixed once created, because it decides what every past period counted.</span>}
+        </label>
+      )}
 
       <div className="muted">Areas (label and colour)</div>
       <AreaChips value={areas} onToggle={toggleArea} />
@@ -128,7 +167,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
               {initial.kind === 'time' ? formatMinutes(currentTarget(initial, now)) : currentTarget(initial, now)}).
             </p>
           )}
-          {!editing && areas.length > 0 && (
+          {!editing && areas.length > 0 && (type === 'count' ? source === 'linked' : type === 'time' ? source === 'linked' : true) && (
             <label className="check-row">
               <input type="checkbox" checked={backfill} onChange={(e) => setBackfill(e.target.checked)} />
               Link my existing entries in these areas

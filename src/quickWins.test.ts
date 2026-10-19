@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { linkByArea, progressFor } from './goals'
 import { applyQuickWin, applyTemplateToWins, contributionsFor, revertTemplateApplication, templateHasDetails, topQuickWins, undoQuickWin, winsNamed } from './quickWins'
 import { DEFAULT_AREAS } from './areas'
-import { amountWin, data, doneWin, guitar, session, squats, todo } from './testHelpers'
-import type { QuickWin } from './types'
+import { SINCE, amountWin, data, doneWin, guitar, session, squats, todo } from './testHelpers'
+import type { GoalDef, QuickWin } from './types'
 
 const MON = new Date(2026, 9, 12)
 const WED = new Date(2026, 9, 14, 8, 15)
@@ -230,5 +230,45 @@ describe('undoing an applied template', () => {
     const other = doneWin(WED, { id: 'w2', title: 'Other' })
     const d = { ...base, wins: [original, other] }
     expect(revertTemplateApplication(d, mow, [original]).wins[1]).toBe(other)
+  })
+})
+
+describe('a quick win remembers where its wins came from', () => {
+  const base = data([guitar, squats], [], [], [], [tenSquats, stretch])
+
+  it('marks the win as a quick-win tap and records which quick win it was', () => {
+    const result = applyQuickWin(base, 'q1', WED)!
+    expect(result.data.wins[0]).toMatchObject({ origin: 'quick', quickWinId: 'q1' })
+  })
+
+  it('finds its wins by identity even after they were renamed, and falls back to the name for older ones', () => {
+    const tapped = { ...doneWin(WED, { origin: 'quick', quickWinId: 'q1', title: 'Renamed since' }) }
+    const older = doneWin(WED, { title: '10 squats' }) // from before ids were recorded
+    const other = doneWin(WED, { origin: 'quick', quickWinId: 'q2', title: 'Stretch' })
+    expect(winsNamed([tapped, older, other], '10 squats', undefined, 'q1').map((w) => w.id).sort()).toEqual([tapped.id, older.id].sort())
+    expect(winsNamed([tapped, older, other], '10 squats').map((w) => w.id)).toEqual([older.id]) // by name alone
+  })
+})
+
+describe('what a win counts toward when goals use rules', () => {
+  const anything: GoalDef = { id: 'any', title: 'Do 10 things', areas: [], kind: 'count', period: 'week', source: 'any', targets: [{ from: SINCE, amount: 10 }] }
+  const todos: GoalDef = { ...anything, id: 'todos', title: 'Finish 10 to-dos', source: 'todo' }
+  const quicks: GoalDef = { ...anything, id: 'quicks', title: 'Tap 10 quick wins', source: 'quick' }
+  const allTime: GoalDef = { ...anything, id: 'time', title: '10 hours', kind: 'time', source: 'any', targets: [{ from: SINCE, amount: 600 }] }
+  const d0 = data([anything, todos, quicks, allTime], [], [], [], [tenSquats, stretch])
+
+  it('a quick-win tap counts toward "anything" and "quick wins", but not "to-dos"', () => {
+    const r = applyQuickWin(d0, 'q1', WED)!
+    expect(contributionsFor(r.data, r.winId, WED)).toEqual(['Do 10 things: 1 of 10', 'Tap 10 quick wins: 1 of 10'])
+  })
+
+  it('a quick win with minutes also counts toward the "all time" goal', () => {
+    const r = applyQuickWin(d0, 'q2', WED)! // Stretch has 20 minutes
+    expect(contributionsFor(r.data, r.winId, WED)).toContain('10 hours: 20m of 10h')
+  })
+
+  it('a win with no minutes does not move the "all time" goal', () => {
+    const r = applyQuickWin(d0, 'q1', WED)!
+    expect(contributionsFor(r.data, r.winId, WED).join('|')).not.toContain('10 hours')
   })
 })

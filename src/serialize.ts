@@ -74,6 +74,8 @@ export function serializeChecked(data: AppData): string {
 const STATUSES = ['todo', 'doing', 'done', 'dropped']
 const KINDS = ['time', 'count', 'completion', 'amount']
 const PERIODS = ['day', 'week', 'month']
+const SOURCES = ['linked', 'any', 'todo', 'quick']
+const ORIGINS = ['todo', 'quick', 'logged']
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x)
@@ -97,7 +99,9 @@ function validWin(w: unknown): boolean {
     (w.status !== 'done' || validDate(w.completedAt)) &&
     isStringArray(w.goalIds) &&
     isStringArray(w.areas) &&
-    optional(w.amount, isNumber)
+    optional(w.amount, isNumber) &&
+    optional(w.origin, (o) => isString(o) && ORIGINS.includes(o)) &&
+    optional(w.quickWinId, isString)
   )
 }
 
@@ -127,7 +131,8 @@ function validGoal(g: unknown): boolean {
     Array.isArray(g.targets) &&
     g.targets.every((t) => isRecord(t) && validDate(t.from) && isNumber(t.amount)) &&
     optional(g.childIds, isStringArray) &&
-    optional(g.archivedAt, validDate)
+    optional(g.archivedAt, validDate) &&
+    optional(g.source, (s) => isString(s) && SOURCES.includes(s))
   )
 }
 

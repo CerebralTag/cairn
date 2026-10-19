@@ -4,7 +4,9 @@ import {
   archivedBefore,
   childrenFor,
   currentTarget,
+  goalSource,
   isActive,
+  isLinkable,
   linkByArea,
   periodEnd,
   periodStartFor,
@@ -343,5 +345,75 @@ describe('linkByArea for amount and time goals', () => {
     const d = data([squatsGoal, { ...guitar, areas: ['health'] }], [], [entry])
     expect(linkByArea(squatsGoal, d).timeEntries[0].goalIds).toEqual([])
     expect(linkByArea({ ...guitar, areas: ['health'] }, d).timeEntries[0].goalIds).toEqual(['guitar'])
+  })
+})
+
+describe('goals that count by a rule instead of by tags', () => {
+  const NEXT_MON = new Date(2026, 9, 19)
+  const rule = (kind: 'count' | 'time' | 'amount', source: 'any' | 'todo' | 'quick'): GoalDef => ({
+    id: 'g', title: 'g', areas: [], kind, period: 'week', source, targets: [{ from: SINCE, amount: 10 }],
+  })
+  const wins = [
+    doneWin(MON, { origin: 'todo', title: 'planned and finished' }),
+    doneWin(MON, { origin: 'quick', quickWinId: 'q', title: 'quick tap' }),
+    doneWin(MON, { origin: 'logged', title: 'logged after the fact' }),
+    doneWin(MON, { title: 'saved before origins existed' }),
+    { ...todo({ title: 'not finished' }), origin: 'todo' as const },
+    { ...doneWin(MON, { origin: 'todo' }), status: 'dropped' as const },
+    doneWin(NEXT_MON, { origin: 'todo', title: 'next week' }),
+  ]
+
+  it('"anything I finish" counts every finished task, tagged or not, in the period it finished', () => {
+    expect(progressFor(rule('count', 'any'), data([rule('count', 'any')], wins), MON).done).toBe(4)
+  })
+
+  it('"to-dos I finish" counts only tasks that started as to-dos', () => {
+    expect(progressFor(rule('count', 'todo'), data([], wins), MON).done).toBe(1)
+  })
+
+  it('"quick wins I tap" counts only quick-win taps', () => {
+    expect(progressFor(rule('count', 'quick'), data([], wins), MON).done).toBe(1)
+  })
+
+  it('never count an unfinished, reopened or dropped task, and move with the completion date', () => {
+    expect(progressFor(rule('count', 'any'), data([], wins), NEXT_MON).done).toBe(1)
+  })
+
+  it('"all the time I log" adds up every time entry in the period, linked or not', () => {
+    const d = data([], [], [
+      session(MON, 30), // linked to nothing
+      session(new Date(2026, 9, 14), 45, { goalIds: ['guitar'] }),
+      session(new Date(2026, 9, 11, 23, 59), 60), // the Sunday before: another week
+      session(NEXT_MON, 60), // next week
+    ])
+    expect(progressFor(rule('time', 'any'), d, MON).done).toBe(75)
+  })
+
+  it('amount goals can add up the amounts of every finished task', () => {
+    const d = data([], [{ ...doneWin(MON), amount: 10 }, doneWin(MON), { ...doneWin(MON), amount: 5 }])
+    expect(progressFor(rule('amount', 'any'), d, MON).done).toBe(16) // 10 + 1 (no amount) + 5
+  })
+
+  it('leave a plain goal alone: no source means tagged wins only', () => {
+    const plain = { ...rule('count', 'any'), source: undefined }
+    expect(goalSource(plain)).toBe('linked')
+    const d = data([plain], [doneWin(MON), doneWin(MON, { goalIds: ['g'] })])
+    expect(progressFor(plain, d, MON).done).toBe(1)
+  })
+
+  it('are not offered for tagging, and the backfill never touches them', () => {
+    expect(isLinkable({ ...rule('count', 'any'), areas: ['health'] })).toBe(false)
+    expect(isLinkable({ ...rule('count', 'any'), source: undefined })).toBe(true)
+    const d = data([], [doneWin(MON, { areas: ['health'] })], [session(MON, 20, { areas: ['health'] })])
+    const result = linkByArea({ ...rule('time', 'any'), areas: ['health'] }, d)
+    expect(result.wins[0].goalIds).toEqual([])
+    expect(result.timeEntries[0].goalIds).toEqual([])
+  })
+
+  it('work inside an overarching goal like any other child', () => {
+    const child = rule('count', 'any')
+    const overall: GoalDef = { id: 'all', title: 'All', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['g'] }
+    const d = data([child, overall], Array.from({ length: 10 }, () => doneWin(MON, { origin: 'logged' })))
+    expect(progressFor(overall, d, MON)).toMatchObject({ done: 1, target: 1, met: true })
   })
 })

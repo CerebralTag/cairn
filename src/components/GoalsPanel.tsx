@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAreas } from '../areasContext'
-import { PERIOD_WORDS, currentTarget, formatMinutes, isActive } from '../goals'
+import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, withTarget } from '../goals'
 import type { GoalDef } from '../types'
 import { GoalForm } from './GoalForm'
 
@@ -19,9 +19,24 @@ function describe(goal: GoalDef, goals: GoalDef[]): string {
     return n === 0 ? 'No goals included yet. Edit it to choose some.' : `Met when all ${n} of its goals are met, ${per}`
   }
   const target = currentTarget(goal, new Date())
-  if (goal.kind === 'time') return `${formatMinutes(target)} ${per}`
-  return `${target} ${per}`
+  const rule = RULE_WORDS[goalSource(goal)]?.[goal.kind === 'time' ? 'time' : 'count']
+  const amount = goal.kind === 'time' ? formatMinutes(target) : String(target)
+  return `${amount} ${per}${rule ? `, ${rule}` : ''}`
 }
+
+// How a goal's rule reads in the list. 'linked' is the plain default and needs no words.
+const RULE_WORDS: Record<string, { time?: string; count?: string }> = {
+  any: { time: 'all the time you log', count: 'anything you finish' },
+  todo: { count: 'to-dos you finish' },
+  quick: { count: 'quick wins you tap' },
+}
+
+// One-tap starters: ordinary goals, ready to edit. Nothing special is stored for them.
+const STARTERS: { label: string; title: string; kind: 'count' | 'time'; source: 'any' | 'todo'; amount: number }[] = [
+  { label: 'Do 10 things', title: 'Do 10 things', kind: 'count', source: 'any', amount: 10 },
+  { label: 'Finish 10 to-dos', title: 'Finish 10 to-dos', kind: 'count', source: 'todo', amount: 10 },
+  { label: '10 hours of anything', title: '10 hours of anything', kind: 'time', source: 'any', amount: 600 },
+]
 
 export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Props) {
   const { goalColour } = useAreas()
@@ -36,6 +51,20 @@ export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Pr
     onSave(goal, backfill)
     setAdding(false)
     setEditingId(null)
+  }
+
+  function addStarter(starter: (typeof STARTERS)[number]) {
+    const now = new Date()
+    const goal: GoalDef = {
+      id: crypto.randomUUID(),
+      title: starter.title,
+      areas: [],
+      kind: starter.kind,
+      period: 'week',
+      source: starter.source,
+      targets: [],
+    }
+    onSave(withTarget(goal, starter.amount, now), false)
   }
 
   function deleteForGood(goal: GoalDef) {
@@ -77,9 +106,18 @@ export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Pr
       {adding ? (
         <GoalForm allGoals={goals} onSave={save} onCancel={() => setAdding(false)} />
       ) : (
-        <button className="did-something" onClick={() => setAdding(true)}>
-          Add a goal
-        </button>
+        <>
+          <button className="did-something" onClick={() => setAdding(true)}>
+            Add a goal
+          </button>
+          <div className="chips" aria-label="Quick starts">
+            {STARTERS.map((s) => (
+              <button key={s.label} className="chip" onClick={() => addStarter(s)}>
+                + {s.label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {archived.length > 0 && (

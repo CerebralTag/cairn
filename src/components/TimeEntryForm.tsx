@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { TimeEntryPatch } from '../edits'
-import { isActive } from '../goals'
+import { isLinkable } from '../goals'
 import { positiveNumber } from '../limits'
 import { parseDateTimeInput, toDateTimeInput } from '../dates'
 import type { Area, GoalDef, TimeEntry } from '../types'
@@ -29,7 +29,7 @@ export function TimeEntryForm({ entry, attachedTo, goals, onSave, onCancel, onDe
   const [error, setError] = useState<string | null>(null)
 
   const standalone = entry.winId === undefined
-  const leafGoals = goals.filter((g) => !g.childIds && isActive(g))
+  const leafGoals = goals.filter(isLinkable)
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()

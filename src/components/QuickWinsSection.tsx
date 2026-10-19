@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatMinutes, isActive, startOfWeek } from '../goals'
+import { formatMinutes, goalSource, isLinkable, startOfWeek } from '../goals'
 import { MAX_NUMBER, positiveNumber } from '../limits'
 import { useAreas } from '../areasContext'
 import { templateHasDetails, winsNamed } from '../quickWins'
@@ -20,6 +20,8 @@ type Props = {
 // so earlier wins keep them unless you choose to bring them up to date.
 type Offer = { template: QuickWin; oldTitle: string; weekCount: number; allCount: number; weekStart: Date }
 
+const goalSourceIsLinked = (g: GoalDef) => goalSource(g) === 'linked'
+
 function QuickWinForm({
   initial,
   goals,
@@ -38,7 +40,7 @@ function QuickWinForm({
   const [goalIds, setGoalIds] = useState<string[]>(initial?.goalIds ?? [])
 
   // Archived goals aren't offered, but one this quick win is already linked to stays visible.
-  const leafGoals = goals.filter((g) => !g.childIds && (isActive(g) || initial?.goalIds.includes(g.id)))
+  const leafGoals = goals.filter((g) => isLinkable(g) || (!g.childIds && goalSourceIsLinked(g) && initial?.goalIds.includes(g.id)))
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -123,8 +125,8 @@ export function QuickWinsSection({ quickWins, goals, wins, onSave, onRemove, onA
     // Only an EDIT can leave earlier wins out of date, and only if it gives them something.
     if (before && templateHasDetails(q)) {
       const weekStart = startOfWeek(new Date())
-      const allCount = winsNamed(wins, before.title).length
-      const weekCount = winsNamed(wins, before.title, weekStart).length
+      const allCount = winsNamed(wins, before.title, undefined, before.id).length
+      const weekCount = winsNamed(wins, before.title, weekStart, before.id).length
       if (allCount > 0) setOffer({ template: q, oldTitle: before.title, weekCount, allCount, weekStart })
     }
   }

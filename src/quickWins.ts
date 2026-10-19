@@ -1,6 +1,6 @@
 // Quick wins: one-tap templates for wins ("10 squats"). Tapping one logs an ordinary
 // win with the template's amount, areas and goal links (and minutes, if it has them).
-import { isActive, periodStartFor, progressFor, progressLabel, targetFor } from './goals'
+import { goalSource, isActive, periodStartFor, progressFor, progressLabel, targetFor } from './goals'
 import { nameKey } from './suggest'
 import type { AppData, QuickWin, TimeEntry, Win } from './types'
 
@@ -25,6 +25,8 @@ export function applyQuickWin(data: AppData, quickWinId: string, now: Date): { d
     goalIds: template.goalIds,
     areas: template.areas,
     amount: template.amount,
+    origin: 'quick',
+    quickWinId: template.id,
   }
   const entry: TimeEntry | null = template.minutes
     ? { id: crypto.randomUUID(), at: now, minutes: template.minutes, winId, goalIds: [], areas: [] }
@@ -52,14 +54,29 @@ export function undoQuickWin(data: AppData, winId: string, quickWinId: string): 
 }
 
 // What a win contributes to right now, as short lines for the confirmation:
-// "Squats: 40 of 100". Only goals the win is linked to, and that have a target this
-// period, appear, so a win linked to nothing is simply a win and the list is empty.
+// "Squats: 40 of 100". Only goals this win counts toward (linked to it, or counted by a rule
+// it meets) and that have a target this period appear, so a win that counts toward nothing
+// is simply a win and the list is empty.
 export function contributionsFor(data: AppData, winId: string, now: Date): string[] {
   const win = data.wins.find((w) => w.id === winId)
   if (!win) return []
+  const hasTime = data.timeEntries.some((e) => e.winId === winId)
+  // A goal is helped by this win if it is linked to it, or counts by a rule this win meets.
+  const helps = (g: (typeof data.goals)[number]): boolean => {
+    switch (goalSource(g)) {
+      case 'any':
+        return g.kind === 'time' ? hasTime : win.status === 'done'
+      case 'todo':
+        return win.status === 'done' && win.origin === 'todo'
+      case 'quick':
+        return win.status === 'done' && win.origin === 'quick'
+      default:
+        return win.goalIds.includes(g.id)
+    }
+  }
   return data.goals
     .filter((g) => !g.childIds && isActive(g))
-    .filter((g) => win.goalIds.includes(g.id))
+    .filter(helps)
     .filter((g) => (targetFor(g, periodStartFor(g.period, now)) ?? 0) > 0)
     .map((g) => `${g.title}: ${progressLabel(g, progressFor(g, data, periodStartFor(g.period, now)))}`)
 }
@@ -72,14 +89,16 @@ export function contributionsFor(data: AppData, winId: string, now: Date): strin
 // "Mow the lawn" and "mow the lawn!" are one name), optionally only since a date.
 
 // Finished wins with this name, newest first, optionally only those finished since `since`.
-export function winsNamed(wins: Win[], title: string, since?: Date): Win[] {
+// When the quick win's id is given, wins tapped from that quick win are found by identity,
+// even if they have since been renamed; wins from before that was recorded fall back to the name.
+export function winsNamed(wins: Win[], title: string, since?: Date, templateId?: string): Win[] {
   const key = nameKey(title)
   return wins
     .filter(
       (w) =>
         w.status === 'done' &&
         w.completedAt !== undefined &&
-        nameKey(w.title) === key &&
+        ((templateId !== undefined && w.quickWinId === templateId) || nameKey(w.title) === key) &&
         (since === undefined || w.completedAt.getTime() >= since.getTime()),
     )
     .sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0))
@@ -99,7 +118,7 @@ export function applyTemplateToWins(
   matchTitle: string,
   since?: Date,
 ): { data: AppData; changedIds: string[] } {
-  const targets = new Set(winsNamed(data.wins, matchTitle, since).map((w) => w.id))
+  const targets = new Set(winsNamed(data.wins, matchTitle, since, template.id).map((w) => w.id))
   const areaIds = new Set(data.areas.map((a) => a.id))
   const activeGoals = new Set(data.goals.filter(isActive).map((g) => g.id))
   const addAreas = template.areas.filter((a) => areaIds.has(a))
