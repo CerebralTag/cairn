@@ -1,8 +1,9 @@
 // The timer. Only the start time is stored, so elapsed time is always derived and
 // stays correct across app restarts, suspended tabs and a locked phone.
+import { applyQuickWin } from './quickWins'
 import type { ActiveTimer, AppData, Area, TimeEntry } from './types'
 
-export type TimerInput = { title: string; winId?: string; areas: Area[]; goalIds: string[] }
+export type TimerInput = { title: string; winId?: string; quickWinId?: string; areas: Area[]; goalIds: string[] }
 
 // Starting while one is already running does nothing: there is only ever one.
 export function startTimer(data: AppData, input: TimerInput, now: Date): AppData {
@@ -28,19 +29,35 @@ export function isLongRunning(timer: ActiveTimer, now: Date): boolean {
 // session really began (it defaults to when the timer was started).
 export type StopOptions = { minutes?: number; at?: Date }
 
-export function stopTimer(data: AppData, now: Date, options: StopOptions = {}): { data: AppData; entry: TimeEntry | null } {
+export function stopTimer(
+  data: AppData,
+  now: Date,
+  options: StopOptions = {},
+): { data: AppData; entry: TimeEntry | null; quickWinId?: string; winId?: string } {
   const timer = data.timer
   if (!timer) return { data, entry: null }
+
+  const minutes =
+    options.minutes !== undefined
+      ? Math.max(1, Math.round(options.minutes))
+      : Math.max(1, Math.round(elapsedMs(timer, now) / 60_000))
+
+  // Started from a repeatable task: the session is a finished win from it, with the time attached.
+  // (If the template was removed meanwhile, fall through and keep the time as a standalone entry.)
+  if (timer.quickWinId) {
+    const logged = applyQuickWin(data, timer.quickWinId, now, { minutes, startedAt: options.at ?? timer.startedAt })
+    if (logged) {
+      const entry = logged.data.timeEntries.find((e) => e.winId === logged.winId) ?? null
+      return { data: { ...logged.data, timer: null }, entry, quickWinId: timer.quickWinId, winId: logged.winId }
+    }
+  }
 
   // If the task was deleted while the timer ran, keep the time as a standalone entry.
   const attached = timer.winId !== undefined && data.wins.some((w) => w.id === timer.winId)
   const entry: TimeEntry = {
     id: crypto.randomUUID(),
     at: options.at ?? timer.startedAt,
-    minutes:
-      options.minutes !== undefined
-        ? Math.max(1, Math.round(options.minutes))
-        : Math.max(1, Math.round(elapsedMs(timer, now) / 60_000)),
+    minutes,
     title: attached ? undefined : timer.title,
     winId: attached ? timer.winId : undefined,
     goalIds: timer.goalIds,

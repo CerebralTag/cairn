@@ -28,7 +28,7 @@ function describe(goal: GoalDef, goals: GoalDef[]): string {
 const RULE_WORDS: Record<string, { time?: string; count?: string }> = {
   any: { time: 'all the time you log', count: 'anything you finish' },
   todo: { count: 'to-dos you finish' },
-  quick: { count: 'quick wins you tap' },
+  quick: { count: 'repeatable tasks you tap' },
 }
 
 // One-tap starters: ordinary goals, ready to edit. Nothing special is stored for them.

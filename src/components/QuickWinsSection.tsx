@@ -36,6 +36,7 @@ function QuickWinForm({
   const [title, setTitle] = useState(initial?.title ?? '')
   const [amount, setAmount] = useState(initial?.amount ? String(initial.amount) : '')
   const [minutes, setMinutes] = useState(initial?.minutes ? String(initial.minutes) : '')
+  const [askMinutes, setAskMinutes] = useState(initial?.askMinutes ?? false)
   const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
   const [goalIds, setGoalIds] = useState<string[]>(initial?.goalIds ?? [])
 
@@ -54,13 +55,14 @@ function QuickWinForm({
       goalIds,
       minutes: parsedMinutes,
       amount: parsedAmount,
+      askMinutes: askMinutes || undefined,
       uses: initial?.uses ?? 0,
     })
   }
 
   return (
     <form className="card form" onSubmit={handleSubmit}>
-      <input autoFocus placeholder="Name (e.g. 10 squats)" aria-label="Name (e.g. 10 squats)" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <input autoFocus placeholder="Name (e.g. 10 squats, Woodshop)" aria-label="Name (e.g. 10 squats, Woodshop)" value={title} onChange={(e) => setTitle(e.target.value)} />
 
       <input
         type="number"
@@ -95,6 +97,11 @@ function QuickWinForm({
       )}
 
       <input type="number" min="1" placeholder="Minutes (optional)" aria-label="Minutes (optional)" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+      <label className="check-row">
+        <input type="checkbox" checked={askMinutes} onChange={(e) => setAskMinutes(e.target.checked)} />
+        Ask how long each time
+      </label>
+      <p className="muted">The ▶ on Today starts a timer instead, and logs the win with the time when you stop.</p>
 
       <div className="form-buttons">
         <button type="submit" className="primary" disabled={title.trim() === ''}>
@@ -140,7 +147,7 @@ export function QuickWinsSection({ quickWins, goals, wins, onSave, onRemove, onA
   }
 
   function remove(q: QuickWin) {
-    if (!window.confirm(`Remove the quick win "${q.title}"? Wins you already logged stay.`)) return
+    if (!window.confirm(`Remove the repeatable task "${q.title}"? Wins you already logged stay.`)) return
     setOffer(null)
     onRemove(q.id)
   }
@@ -156,7 +163,7 @@ export function QuickWinsSection({ quickWins, goals, wins, onSave, onRemove, onA
         }}
       >
         <h2>
-          Quick wins <span className="muted">{quickWins.length}</span>
+          Repeatable tasks <span className="muted">{quickWins.length}</span>
         </h2>
         <span className="muted">{open ? 'Hide' : 'Show'}</span>
       </button>
@@ -200,6 +207,7 @@ export function QuickWinsSection({ quickWins, goals, wins, onSave, onRemove, onA
                       {[
                         q.amount ? String(q.amount) : null,
                         q.minutes ? formatMinutes(q.minutes) : null,
+                        q.askMinutes ? 'asks how long' : null,
                         q.uses > 0 ? `used ${q.uses}×` : null,
                       ]
                         .filter(Boolean)
@@ -221,14 +229,14 @@ export function QuickWinsSection({ quickWins, goals, wins, onSave, onRemove, onA
                 </li>
               ),
             )}
-            {quickWins.length === 0 && <li className="muted">None yet. Add the things you do often.</li>}
+            {quickWins.length === 0 && <li className="muted">None yet. Add the things you do again and again.</li>}
           </ul>
 
           {adding ? (
             <QuickWinForm goals={goals} onSave={save} onCancel={() => setAdding(false)} />
           ) : (
             <button className="link" onClick={() => setAdding(true)}>
-              + Add a quick win
+              + Add a repeatable task
             </button>
           )}
         </>

@@ -233,6 +233,23 @@ describe('undoing an applied template', () => {
   })
 })
 
+describe('typed minutes', () => {
+  const asks: QuickWin = { id: 'q3', title: 'Woodshop', areas: ['home'], goalIds: ['guitar'], minutes: 15, askMinutes: true, uses: 0 }
+  const d0 = data([guitar], [], [], [], [asks])
+
+  it('replace the template\'s own minutes when given', () => {
+    const r = applyQuickWin(d0, 'q3', WED, { minutes: 50 })!
+    expect(r.data.timeEntries).toHaveLength(1)
+    expect(r.data.timeEntries[0]).toMatchObject({ minutes: 50, winId: r.winId, at: WED })
+  })
+
+  it('fall back to the template\'s minutes, and to none at all', () => {
+    expect(applyQuickWin(d0, 'q3', WED)!.data.timeEntries[0].minutes).toBe(15)
+    const none = data([guitar], [], [], [], [{ ...asks, minutes: undefined }])
+    expect(applyQuickWin(none, 'q3', WED)!.data.timeEntries).toHaveLength(0)
+  })
+})
+
 describe('a quick win remembers where its wins came from', () => {
   const base = data([guitar, squats], [], [], [], [tenSquats, stretch])
 

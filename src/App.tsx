@@ -9,6 +9,7 @@ import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
 import { NavBar, type Screen } from './components/NavBar'
 import { OverallCard } from './components/OverallCard'
+import { QuickWinAsk } from './components/QuickWinAsk'
 import { QuickWinChips } from './components/QuickWinChips'
 import { RecoveryScreen } from './components/RecoveryScreen'
 import { TimerCard } from './components/TimerCard'
@@ -50,6 +51,7 @@ function App() {
   const [data, setData] = useState<AppData>(emptyData)
   const [logging, setLogging] = useState(false)
   const [startingTimer, setStartingTimer] = useState(false)
+  const [askingQuickId, setAskingQuickId] = useState<string | null>(null) // repeatable task waiting for its minutes
   const [editingKey, setEditingKey] = useState<string | null>(null) // the Today entry being fixed
   const [screen, setScreen] = useState<Screen>('today')
   const [manageTab, setManageTab] = useState<ManageTab>('tasks')
@@ -212,14 +214,32 @@ function App() {
     const result = stopTimer(data, new Date(), options)
     if (!result.entry || !stopped) return
     const entry = result.entry
+    const { winId, quickWinId } = result
     setData(result.data)
+    const lines = winId ? contributionsFor(result.data, winId, new Date()) : []
     setToast({
       id: entry.id,
-      message: `Saved ${formatMinutes(entry.minutes)} to "${stopped.title}"`,
-      // Undo removes the saved time and puts the timer back (unless another one has started).
-      // If a different timer is running by now, leave the saved time alone rather than lose it.
-      undo: () => setData((d) => (d.timer ? d : { ...deleteEntry(d, entry.id), timer: stopped })),
+      message:
+        winId !== undefined
+          ? `Logged "${stopped.title}" · ${formatMinutes(entry.minutes)}${lines.length > 0 ? ` · ${lines.join(' · ')}` : ''}`
+          : `Saved ${formatMinutes(entry.minutes)} to "${stopped.title}"`,
+      // Undo removes the saved time (and the win a repeatable task logged) and puts the timer back
+      // (unless another one has started). If a different timer is running by now, leave the saved
+      // time alone rather than lose it.
+      undo: () =>
+        setData((d) => {
+          if (d.timer) return d
+          const removed = winId !== undefined && quickWinId !== undefined ? undoQuickWin(d, winId, quickWinId) : deleteEntry(d, entry.id)
+          return { ...removed, timer: stopped }
+        }),
     })
+  }
+
+  // ▶ on a repeatable task: the timer runs under its name and, when stopped, logs the win with the time.
+  function beginQuickTimer(quickWinId: string) {
+    const template = data.quickWins.find((q) => q.id === quickWinId)
+    if (!template || data.timer) return
+    beginTimer({ title: template.title, quickWinId, areas: template.areas, goalIds: template.goalIds })
   }
 
   // ----- goals, areas, quick wins -----
@@ -268,13 +288,19 @@ function App() {
   }
 
   // One tap logs a win; the confirmation says what it counted toward, with Undo.
-  function tapQuickWin(quickWinId: string) {
+  function tapQuickWin(quickWinId: string, answer?: { minutes?: number }) {
+    // One that asks how long waits for the answer first (the answer comes back through here).
+    if (!answer && data.quickWins.find((q) => q.id === quickWinId)?.askMinutes) {
+      setAskingQuickId(quickWinId)
+      return
+    }
+    setAskingQuickId(null)
     // A double-tap on the same chip is one tap, not two wins.
     const tappedAt = Date.now()
     if (lastQuickTap.current.id === quickWinId && tappedAt - lastQuickTap.current.at < 700) return
     lastQuickTap.current = { id: quickWinId, at: tappedAt }
     const now = new Date()
-    const result = applyQuickWin(data, quickWinId, now)
+    const result = applyQuickWin(data, quickWinId, now, { minutes: answer?.minutes })
     if (!result) return
     setData(result.data)
     const title = data.quickWins.find((q) => q.id === quickWinId)?.title ?? ''
@@ -462,7 +488,21 @@ function App() {
                 ▶ Start a timer
               </button>
             )}
-            <QuickWinChips quickWins={data.quickWins} onTap={tapQuickWin} onManage={() => openManage('tasks')} />
+            {askingQuickId !== null && data.quickWins.some((q) => q.id === askingQuickId) ? (
+              <QuickWinAsk
+                quickWin={data.quickWins.find((q) => q.id === askingQuickId)!}
+                // "Just log it" has no minutes: it logs with the template's own, without asking again.
+                onLog={(minutes) => tapQuickWin(askingQuickId, { minutes })}
+                onCancel={() => setAskingQuickId(null)}
+              />
+            ) : (
+              <QuickWinChips
+                quickWins={data.quickWins}
+                onTap={(id) => tapQuickWin(id)}
+                onStartTimer={timerRunning ? undefined : beginQuickTimer}
+                onManage={() => openManage('tasks')}
+              />
+            )}
           </>
         )}
 

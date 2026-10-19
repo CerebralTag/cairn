@@ -227,6 +227,26 @@ describe('serializeChecked (never write what could not be loaded again)', () => 
   })
 })
 
+describe('repeatable-task timers and prompts survive saving', () => {
+  it('round-trips askMinutes and a timer started from a repeatable task', () => {
+    const withExtras = {
+      ...sample,
+      quickWins: [{ id: 'q', title: 'Woodshop', areas: [], goalIds: [], askMinutes: true, uses: 0 }],
+      timer: { startedAt: new Date(2026, 9, 18, 9), title: 'Woodshop', quickWinId: 'q', areas: [], goalIds: [] },
+    }
+    expect(deserialize(serialize(withExtras))).toEqual(withExtras)
+  })
+
+  it('rejects a non-boolean askMinutes or a non-text quickWinId', () => {
+    const raw = JSON.parse(serialize({ ...sample, quickWins: [{ id: 'q', title: 'W', areas: [], goalIds: [], uses: 0 }] }))
+    raw.quickWins[0].askMinutes = 'yes'
+    expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
+    const raw2 = JSON.parse(serialize({ ...sample, timer: { startedAt: new Date(2026, 9, 18, 9), title: 'W', areas: [], goalIds: [] } }))
+    raw2.timer.quickWinId = 5
+    expect(() => deserialize(JSON.stringify(raw2))).toThrow(/damaged/)
+  })
+})
+
 describe('task origin and goal rules survive saving and are validated', () => {
   const good = () => JSON.parse(serialize(sample)) as Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LONG_TIMER_MS, discardTimer, elapsedMs, formatElapsed, isLongRunning, startTimer, stopTimer } from './timer'
+import { undoQuickWin } from './quickWins'
+import type { QuickWin } from './types'
 import { data, doneWin, guitar, todo } from './testHelpers'
 
 const T0 = new Date(2026, 9, 18, 9, 0, 0)
@@ -105,5 +107,46 @@ describe('a forgotten timer', () => {
   it('still saves at least one minute for a tiny given length', () => {
     const d = startTimer(base, { title: 'x', areas: [], goalIds: [] }, T0)
     expect(stopTimer(d, at(5), { minutes: 0.2 }).entry?.minutes).toBe(1)
+  })
+})
+
+describe('a timer started from a repeatable task', () => {
+  const woodshop: QuickWin = { id: 'q', title: 'Woodshop', areas: ['home'], goalIds: ['guitar'], uses: 2 }
+  const withTemplate = data([guitar], [], [], [], [woodshop])
+  const running = startTimer(withTemplate, { title: 'Woodshop', quickWinId: 'q', areas: ['home'], goalIds: ['guitar'] }, T0)
+
+  it('logs a finished win from the template, with the session attached as its time', () => {
+    const result = stopTimer(running, at(45))
+    expect(result.data.timer).toBeNull()
+    expect(result.data.wins).toHaveLength(1)
+    expect(result.data.wins[0]).toMatchObject({ title: 'Woodshop', status: 'done', origin: 'quick', quickWinId: 'q', goalIds: ['guitar'], areas: ['home'] })
+    expect(result.entry).toMatchObject({ minutes: 45, at: T0, winId: result.winId, goalIds: [], areas: [] })
+    expect(result.data.quickWins[0].uses).toBe(3)
+  })
+
+  it('counts the time toward the template\'s goals through the win', () => {
+    const result = stopTimer(running, at(45))
+    expect(result.data.timeEntries).toHaveLength(1)
+    expect(result.data.timeEntries[0].winId).toBe(result.data.wins[0].id)
+  })
+
+  it('uses a corrected length for a forgotten timer', () => {
+    const result = stopTimer(running, at(60 * 20), { minutes: 30, at: at(10) })
+    expect(result.entry).toMatchObject({ minutes: 30, at: at(10) })
+  })
+
+  it('can be undone completely: no win, no time, no extra use', () => {
+    const result = stopTimer(running, at(45))
+    const undone = undoQuickWin(result.data, result.winId!, result.quickWinId!)
+    expect(undone.wins).toHaveLength(0)
+    expect(undone.timeEntries).toHaveLength(0)
+    expect(undone.quickWins[0].uses).toBe(2)
+  })
+
+  it('keeps the time as a standalone entry if the repeatable task was removed meanwhile', () => {
+    const result = stopTimer({ ...running, quickWins: [] }, at(45))
+    expect(result.winId).toBeUndefined()
+    expect(result.data.wins).toHaveLength(0)
+    expect(result.entry).toMatchObject({ title: 'Woodshop', minutes: 45, goalIds: ['guitar'], areas: ['home'] })
   })
 })

@@ -11,7 +11,16 @@ export function topQuickWins(quickWins: QuickWin[], count: number): QuickWin[] {
 
 // Log a quick win as a finished win stamped `now`. Returns the new data and the
 // new win's id (so the tap can be undone), or null if the template is gone.
-export function applyQuickWin(data: AppData, quickWinId: string, now: Date): { data: AppData; winId: string } | null {
+// `minutes` replaces the template's own minutes (typed on tap, or measured by a timer that
+// started at `startedAt`).
+export type QuickWinOptions = { minutes?: number; startedAt?: Date }
+
+export function applyQuickWin(
+  data: AppData,
+  quickWinId: string,
+  now: Date,
+  options: QuickWinOptions = {},
+): { data: AppData; winId: string } | null {
   const template = data.quickWins.find((q) => q.id === quickWinId)
   if (!template) return null
 
@@ -28,8 +37,9 @@ export function applyQuickWin(data: AppData, quickWinId: string, now: Date): { d
     origin: 'quick',
     quickWinId: template.id,
   }
-  const entry: TimeEntry | null = template.minutes
-    ? { id: crypto.randomUUID(), at: now, minutes: template.minutes, winId, goalIds: [], areas: [] }
+  const minutes = options.minutes ?? template.minutes
+  const entry: TimeEntry | null = minutes
+    ? { id: crypto.randomUUID(), at: options.startedAt ?? now, minutes, winId, goalIds: [], areas: [] }
     : null
 
   return {

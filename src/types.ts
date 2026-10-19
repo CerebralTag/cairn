@@ -99,6 +99,7 @@ export type QuickWin = {
   goalIds: string[] // optional fixed links
   minutes?: number
   amount?: number
+  askMinutes?: boolean // ask how long each time it is tapped
   uses: number
 }
 
@@ -108,6 +109,7 @@ export type ActiveTimer = {
   startedAt: Date
   title: string
   winId?: string // attached to this task, or standalone when absent
+  quickWinId?: string // started from this repeatable task: stopping logs a win from it, with the time
   areas: Area[]
   goalIds: string[]
 }

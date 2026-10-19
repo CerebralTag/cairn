@@ -157,6 +157,7 @@ function validQuickWin(q: unknown): boolean {
     isStringArray(q.goalIds) &&
     optional(q.minutes, isNumber) &&
     optional(q.amount, isNumber) &&
+    optional(q.askMinutes, (v) => typeof v === 'boolean') &&
     isNumber(q.uses)
   )
 }
@@ -167,6 +168,7 @@ function validTimer(t: unknown): boolean {
     validDate(t.startedAt) &&
     isString(t.title) &&
     optional(t.winId, isString) &&
+    optional(t.quickWinId, isString) &&
     isStringArray(t.areas) &&
     isStringArray(t.goalIds)
   )

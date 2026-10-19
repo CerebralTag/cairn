@@ -134,7 +134,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
                 <option value="linked">Tasks I link to it</option>
                 <option value="any">Anything I finish</option>
                 <option value="todo">To-dos I finish</option>
-                <option value="quick">Quick wins I tap</option>
+                <option value="quick">Repeatable tasks I tap</option>
               </>
             ) : (
               <>
