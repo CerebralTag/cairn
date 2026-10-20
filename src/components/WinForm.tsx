@@ -114,7 +114,6 @@ export function WinForm({
         </label>
       )}
 
-      <div className="muted">Areas</div>
       <AreaChips value={areas} onToggle={toggleArea} />
 
       {leafGoals.length > 0 && (

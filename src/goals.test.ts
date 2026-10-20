@@ -7,6 +7,8 @@ import {
   goalSource,
   isActive,
   isLinkable,
+  isTemplateLinkable,
+  taggedTemplates,
   linkByArea,
   periodEnd,
   periodStartFor,
@@ -415,5 +417,50 @@ describe('goals that count by a rule instead of by tags', () => {
     const overall: GoalDef = { id: 'all', title: 'All', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['g'] }
     const d = data([child, overall], Array.from({ length: 10 }, () => doneWin(MON, { origin: 'logged' })))
     expect(progressFor(overall, d, MON)).toMatchObject({ done: 1, target: 1, met: true })
+  })
+})
+
+const NEXT_MON2 = new Date(2026, 9, 19)
+
+describe('a goal met by doing each tagged repeatable task once', () => {
+  const chores: GoalDef = { id: 'chores', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 1 }] }
+  const q = (id: string, goalIds: string[] = ['chores']) => ({ id, title: id, areas: [], goalIds, uses: 0 })
+  const tap = (when: Date, quickWinId: string) => doneWin(when, { origin: 'quick', quickWinId, goalIds: ['chores'] })
+  const base = data([chores], [], [], [], [q('dishes'), q('laundry'), q('bins'), q('guitar', [])])
+
+  it('counts each tagged task once, however often it was done', () => {
+    const d = { ...base, wins: [tap(MON, 'dishes'), tap(MON, 'dishes'), tap(MON, 'dishes'), tap(MON, 'laundry')] }
+    expect(progressFor(chores, d, MON)).toMatchObject({ done: 2, target: 3, met: false })
+    expect(progressFor(chores, d, MON).fraction).toBeCloseTo(2 / 3)
+  })
+
+  it('is met when every tagged task has been done, and ignores untagged ones', () => {
+    const d = { ...base, wins: [tap(MON, 'dishes'), tap(MON, 'laundry'), tap(MON, 'bins'), tap(MON, 'guitar')] }
+    expect(progressFor(chores, d, MON)).toMatchObject({ done: 3, target: 3, met: true })
+  })
+
+  it('only counts finished wins in the period', () => {
+    const d = { ...base, wins: [tap(NEXT_MON2, 'dishes'), { ...tap(MON, 'laundry'), status: 'dropped' as const }] }
+    expect(progressFor(chores, d, MON).done).toBe(0)
+    expect(progressFor(chores, d, NEXT_MON2).done).toBe(1)
+  })
+
+  it('grows when another task is tagged, and is not met with nothing tagged', () => {
+    const done = { ...base, wins: [tap(MON, 'dishes'), tap(MON, 'laundry'), tap(MON, 'bins')] }
+    expect(progressFor(chores, { ...done, quickWins: [...done.quickWins, q('mop')] }, MON).met).toBe(false)
+    expect(progressFor(chores, { ...base, quickWins: [] }, MON)).toMatchObject({ done: 0, target: 0, met: false })
+  })
+
+  it('is offered to repeatable tasks but not to ordinary wins', () => {
+    expect(isTemplateLinkable(chores)).toBe(true)
+    expect(isLinkable(chores)).toBe(false)
+    expect(isTemplateLinkable({ ...chores, source: 'any' })).toBe(false)
+    expect(taggedTemplates(chores, base).map((t) => t.id)).toEqual(['dishes', 'laundry', 'bins'])
+  })
+
+  it('works as a child of an overarching goal', () => {
+    const overall: GoalDef = { id: 'all', title: 'All', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['chores'] }
+    const d = { ...base, goals: [chores, overall], wins: [tap(MON, 'dishes'), tap(MON, 'laundry'), tap(MON, 'bins')] }
+    expect(progressFor(overall, d, MON).met).toBe(true)
   })
 })

@@ -40,9 +40,10 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
   // An overarching goal can only include goals that repeat on the same schedule as it.
   const candidates = allGoals.filter((g) => !g.childIds && g.id !== initial?.id && isActive(g) && g.period === period)
   const parsed = positiveNumber(amount) ?? 0 // 0 means "not a usable number"
+  const eachRule = type === 'count' && source === 'each' // the target is however many tasks are tagged
   const valid =
     title.trim() !== '' &&
-    (type === 'overarching' ? childIds.length > 0 : parsed > 0)
+    (type === 'overarching' ? childIds.length > 0 : eachRule || parsed > 0)
 
   function toggleArea(area: Area) {
     setAreas(areas.includes(area) ? areas.filter((a) => a !== area) : [...areas, area])
@@ -70,7 +71,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
     }
 
     // Time targets are typed in hours but stored as minutes.
-    const target = type === 'time' ? Math.round(parsed * 60) : Math.round(parsed)
+    const target = eachRule ? 1 : type === 'time' ? Math.round(parsed * 60) : Math.round(parsed) // 1 just marks that the goal exists
     const base: GoalDef = initial ?? { id: crypto.randomUUID(), title: '', areas: [], kind: type, period, targets: [] }
     // 'linked' is the default and is stored as no value at all. Amount goals always count linked wins.
     const rule: GoalSource = type === 'count' || type === 'time' ? source : 'linked'
@@ -135,6 +136,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
                 <option value="any">Anything I finish</option>
                 <option value="todo">To-dos I finish</option>
                 <option value="quick">Repeatable tasks I tap</option>
+                <option value="each">Each repeatable task I tag to it, once</option>
               </>
             ) : (
               <>
@@ -147,10 +149,15 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
         </label>
       )}
 
-      <div className="muted">Areas (label and colour)</div>
-      <AreaChips value={areas} onToggle={toggleArea} />
+      <AreaChips value={areas} onToggle={toggleArea} label="Areas (label and colour)" />
 
-      {type !== 'overarching' && (
+      {eachRule && (
+        <p className="muted">
+          Met when every repeatable task tagged to it has been done once {PERIOD_WORDS[period].per.replace('per ', 'each ')}. Tag them in Manage under Repeatable tasks.
+        </p>
+      )}
+
+      {type !== 'overarching' && !eachRule && (
         <>
           <input
             type="number"

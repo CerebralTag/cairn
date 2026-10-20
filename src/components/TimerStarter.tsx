@@ -73,7 +73,6 @@ export function TimerStarter({ goals, tasks, onStart, onCancel }: Props) {
       {!task && (
         <>
           <TitleInput autoFocus placeholder="What are you doing?" value={title} onChange={setTitle} onPick={pickSuggestion} />
-          <div className="muted">Areas</div>
           <AreaChips value={areas} onToggle={toggleArea} />
           {leafGoals.length > 0 && (
             <fieldset className="children">

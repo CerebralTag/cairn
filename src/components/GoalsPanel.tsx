@@ -18,6 +18,7 @@ function describe(goal: GoalDef, goals: GoalDef[]): string {
     const n = goal.childIds.filter((id) => goals.some((g) => g.id === id && isActive(g))).length
     return n === 0 ? 'No goals included yet. Edit it to choose some.' : `Met when all ${n} of its goals are met, ${per}`
   }
+  if (goalSource(goal) === 'each') return `Each repeatable task tagged to it, once ${per}`
   const target = currentTarget(goal, new Date())
   const rule = RULE_WORDS[goalSource(goal)]?.[goal.kind === 'time' ? 'time' : 'count']
   const amount = goal.kind === 'time' ? formatMinutes(target) : String(target)

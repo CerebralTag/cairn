@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import './App.css'
-import { DEFAULT_AREAS } from './areas'
 import { AreasContext } from './areasContext'
 import { makeSuggest } from './suggest'
 import { SuggestContext } from './suggestContext'
@@ -31,7 +30,7 @@ import { deserialize } from './serialize'
 import { discardTimer, startTimer, stopTimer, type StopOptions } from './timer'
 import type { AppData, AreaDef, GoalDef, QuickWin, Win, WinStatus } from './types'
 
-const emptyData: AppData = { timer: null, areas: DEFAULT_AREAS, quickWins: [], goals: [], wins: [], timeEntries: [] }
+const emptyData: AppData = { timer: null, areas: [], quickWins: [], goals: [], wins: [], timeEntries: [] }
 
 type ToastState = { id: string; message: string; undo?: () => void }
 

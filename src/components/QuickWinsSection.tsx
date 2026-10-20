@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatMinutes, goalSource, isLinkable, startOfWeek } from '../goals'
+import { formatMinutes, goalSource, isTemplateLinkable, startOfWeek } from '../goals'
 import { positiveNumber } from '../limits'
 import { useAreas } from '../areasContext'
 import { templateHasDetails, winsNamed } from '../quickWins'
@@ -22,7 +22,7 @@ type Props = {
 // so earlier wins keep them unless you choose to bring them up to date.
 type Offer = { template: QuickWin; oldTitle: string; weekCount: number; allCount: number; weekStart: Date }
 
-const goalSourceIsLinked = (g: GoalDef) => goalSource(g) === 'linked'
+const goalSourceIsLinked = (g: GoalDef) => goalSource(g) === 'linked' || goalSource(g) === 'each'
 
 function QuickWinForm({
   initial,
@@ -47,7 +47,7 @@ function QuickWinForm({
   const [goalIds, setGoalIds] = useState<string[]>(initial?.goalIds ?? [])
 
   // Archived goals aren't offered, but one this quick win is already linked to stays visible.
-  const leafGoals = goals.filter((g) => isLinkable(g) || (!g.childIds && goalSourceIsLinked(g) && initial?.goalIds.includes(g.id)))
+  const leafGoals = goals.filter((g) => isTemplateLinkable(g) || (!g.childIds && goalSourceIsLinked(g) && initial?.goalIds.includes(g.id)))
 
   // Ticking a goal adds its areas; unticking leaves them.
   function toggleGoal(id: string) {
@@ -84,7 +84,6 @@ function QuickWinForm({
         Tick a goal below and this adds to it each time. An amount goal adds the amounts up.
       </p>
 
-      <div className="muted">Areas</div>
       <AreaChips value={areas} onToggle={(a) => setAreas(areas.includes(a) ? areas.filter((x) => x !== a) : [...areas, a])} />
 
       {leafGoals.length > 0 && (

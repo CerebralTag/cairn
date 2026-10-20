@@ -253,7 +253,7 @@ describe('task origin and goal rules survive saving and are validated', () => {
   it('round-trips origin, quickWinId and a goal rule', () => {
     const withExtras = {
       ...sample,
-      goals: [{ ...guitar, source: 'any' as const }],
+      goals: [{ ...guitar, source: 'each' as const }],
       wins: [{ ...sample.wins[0], origin: 'quick' as const, quickWinId: 'q1' }, { ...sample.wins[1], origin: 'todo' as const }],
     }
     expect(deserialize(serialize(withExtras))).toEqual(withExtras)

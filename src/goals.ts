@@ -1,6 +1,6 @@
 // Goal math. Pure functions: data in, result out, no React, no storage.
 // Period results are always calculated from entries, never stored.
-import type { Area, AppData, GoalDef, GoalPeriod, GoalProgress, GoalSource, TimeEntry, Win } from './types'
+import type { Area, AppData, GoalDef, GoalPeriod, GoalProgress, GoalSource, QuickWin, TimeEntry, Win } from './types'
 
 export function addDays(date: Date, days: number): Date {
   const result = new Date(date)
@@ -56,6 +56,17 @@ export function goalSource(goal: GoalDef): GoalSource {
 // offered in the "Counts toward" lists, and overarching goals only combine other goals.
 export function isLinkable(goal: GoalDef): boolean {
   return !goal.childIds && isActive(goal) && goalSource(goal) === 'linked'
+}
+
+// A goal repeatable tasks can be tagged to: the plain "linked" goals, and "each" goals,
+// which are met when every repeatable task tagged to them has been done.
+export function isTemplateLinkable(goal: GoalDef): boolean {
+  return !goal.childIds && isActive(goal) && (goalSource(goal) === 'linked' || goalSource(goal) === 'each')
+}
+
+// The repeatable tasks an "each" goal is made of (those tagged to it right now).
+export function taggedTemplates(goal: GoalDef, data: AppData): QuickWin[] {
+  return data.quickWins.filter((q) => q.goalIds.includes(goal.id))
 }
 
 // The target in effect for the period starting at `periodStart`: the latest
@@ -168,6 +179,22 @@ export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): Go
 
   const source = goalSource(goal)
   let done: number
+  if (source === 'each') {
+    // Met when every repeatable task tagged to the goal has a finished win in the period. The
+    // target is how many are tagged now, so adding a chore raises it (earlier periods are
+    // judged against today's list; the stored target only marks that the goal existed).
+    const tagged = taggedTemplates(goal, data)
+    const doneIds = new Set(
+      data.wins.filter((w) => w.status === 'done' && w.completedAt && inPeriod(w.completedAt)).map((w) => w.quickWinId),
+    )
+    const eachDone = tagged.filter((q) => doneIds.has(q.id)).length
+    return {
+      done: eachDone,
+      target: tagged.length,
+      fraction: tagged.length > 0 ? eachDone / tagged.length : 0,
+      met: tagged.length > 0 && eachDone >= tagged.length,
+    }
+  }
   if (goal.kind === 'time') {
     // Time goals add up minutes, when they happened: all time logged for 'any', otherwise
     // only the entries linked to the goal (directly or through their task).

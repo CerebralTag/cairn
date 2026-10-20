@@ -67,7 +67,6 @@ export function TimeEntryForm({ entry, attachedTo, goals, onSave, onCancel, onDe
 
       {standalone && (
         <>
-          <div className="muted">Areas</div>
           <AreaChips value={areas} onToggle={(a) => setAreas(areas.includes(a) ? areas.filter((x) => x !== a) : [...areas, a])} />
           {leafGoals.length > 0 && (
             <fieldset className="children">

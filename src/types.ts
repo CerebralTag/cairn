@@ -68,7 +68,7 @@ export type GoalTarget = { from: Date; amount: number }
 //  - 'any':   count goals: every finished task; time goals: all time logged
 //  - 'todo':  count goals: every to-do you finish
 //  - 'quick': count goals: every quick-win tap
-export type GoalSource = 'linked' | 'any' | 'todo' | 'quick'
+export type GoalSource = 'linked' | 'any' | 'todo' | 'quick' | 'each'
 
 export type GoalDef = {
   id: string

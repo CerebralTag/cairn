@@ -74,7 +74,7 @@ export function serializeChecked(data: AppData): string {
 const STATUSES = ['todo', 'doing', 'done', 'dropped']
 const KINDS = ['time', 'count', 'completion', 'amount']
 const PERIODS = ['day', 'week', 'month']
-const SOURCES = ['linked', 'any', 'todo', 'quick']
+const SOURCES = ['linked', 'any', 'todo', 'quick', 'each']
 const ORIGINS = ['todo', 'quick', 'logged']
 
 function isRecord(x: unknown): x is Record<string, unknown> {

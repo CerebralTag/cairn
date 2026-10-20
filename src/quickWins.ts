@@ -80,6 +80,8 @@ export function contributionsFor(data: AppData, winId: string, now: Date): strin
         return win.status === 'done' && win.origin === 'todo'
       case 'quick':
         return win.status === 'done' && win.origin === 'quick'
+      case 'each':
+        return win.status === 'done' && data.quickWins.some((q) => q.id === win.quickWinId && q.goalIds.includes(g.id))
       default:
         return win.goalIds.includes(g.id)
     }
