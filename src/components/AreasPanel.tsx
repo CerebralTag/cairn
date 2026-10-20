@@ -1,24 +1,37 @@
 import { useState } from 'react'
 import { PALETTE_SIZE, paletteColour } from '../areas'
-import type { AreaDef } from '../types'
+import { fileableGoals } from '../areaGoals'
+import type { AreaDef, GoalDef } from '../types'
 
 type Props = {
   areas: AreaDef[]
-  onSave: (area: AreaDef) => void
+  goals: GoalDef[]
+  onSave: (area: AreaDef, goalIds?: string[]) => void
   onRemove: (id: string) => void
 }
 
-function AreaForm({ initial, areas, onSave, onCancel }: { initial?: AreaDef; areas: AreaDef[]; onSave: (a: AreaDef) => void; onCancel: () => void }) {
+type FormProps = {
+  initial?: AreaDef
+  areas: AreaDef[]
+  goals: GoalDef[]
+  onSave: (a: AreaDef, goalIds: string[]) => void
+  onCancel: () => void
+}
+
+function AreaForm({ initial, areas, goals, onSave, onCancel }: FormProps) {
   const [name, setName] = useState(initial?.name ?? '')
   // New areas start on the first palette colour nobody is using yet.
   const [colour, setColour] = useState(
     initial?.colour ?? Array.from({ length: PALETTE_SIZE }, (_, i) => i + 1).find((c) => !areas.some((a) => a.colour === c)) ?? 1,
   )
 
+  const choices = fileableGoals(goals)
+  const [goalIds, setGoalIds] = useState<string[]>(initial ? choices.filter((g) => g.areas.includes(initial.id)).map((g) => g.id) : [])
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (name.trim() === '') return
-    onSave({ ...initial, id: initial?.id ?? crypto.randomUUID(), name: name.trim(), colour })
+    onSave({ ...initial, id: initial?.id ?? crypto.randomUUID(), name: name.trim(), colour }, goalIds)
   }
 
   return (
@@ -37,6 +50,21 @@ function AreaForm({ initial, areas, onSave, onCancel }: { initial?: AreaDef; are
           />
         ))}
       </div>
+      {choices.length > 0 && (
+        <fieldset className="children">
+          <legend className="muted">Goals in this area</legend>
+          {choices.map((g) => (
+            <label key={g.id}>
+              <input
+                type="checkbox"
+                checked={goalIds.includes(g.id)}
+                onChange={() => setGoalIds(goalIds.includes(g.id) ? goalIds.filter((x) => x !== g.id) : [...goalIds, g.id])}
+              />
+              {g.title}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <div className="form-buttons">
         <button type="submit" className="primary" disabled={name.trim() === ''}>
           Save
@@ -49,12 +77,12 @@ function AreaForm({ initial, areas, onSave, onCancel }: { initial?: AreaDef; are
   )
 }
 
-export function AreasPanel({ areas, onSave, onRemove }: Props) {
+export function AreasPanel({ areas, goals, onSave, onRemove }: Props) {
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  function save(area: AreaDef) {
-    onSave(area)
+  function save(area: AreaDef, goalIds: string[]) {
+    onSave(area, goalIds)
     setAdding(false)
     setEditingId(null)
   }
@@ -73,7 +101,7 @@ export function AreasPanel({ areas, onSave, onRemove }: Props) {
             editingId === area.id ? (
               <li key={area.id}>
                 <div className="grow">
-                  <AreaForm initial={area} areas={areas} onSave={save} onCancel={() => setEditingId(null)} />
+                  <AreaForm initial={area} areas={areas} goals={goals} onSave={save} onCancel={() => setEditingId(null)} />
                 </div>
               </li>
             ) : (
@@ -102,7 +130,7 @@ export function AreasPanel({ areas, onSave, onRemove }: Props) {
       </section>
 
       {adding ? (
-        <AreaForm areas={areas} onSave={save} onCancel={() => setAdding(false)} />
+        <AreaForm areas={areas} goals={goals} onSave={save} onCancel={() => setAdding(false)} />
       ) : areas.length < PALETTE_SIZE ? (
         <button className="did-something" onClick={() => setAdding(true)}>
           Add an area

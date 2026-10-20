@@ -6,6 +6,7 @@ import { SuggestContext } from './suggestContext'
 import { DEFAULT_AREAS } from './areas'
 import { AreaRings } from './components/AreaRings'
 import { areaCards } from './todayAreas'
+import { setAreaGoals } from './areaGoals'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
 import { NavBar, type Screen } from './components/NavBar'
@@ -263,11 +264,15 @@ function App() {
     })
   }
 
-  function saveArea(area: AreaDef) {
-    setData((d) => ({
-      ...d,
-      areas: d.areas.some((a) => a.id === area.id) ? d.areas.map((a) => (a.id === area.id ? area : a)) : [...d.areas, area],
-    }))
+  // `goalIds`, when given, is the full set of goals filed under the area (from its edit form).
+  function saveArea(area: AreaDef, goalIds?: string[]) {
+    setData((d) => {
+      const next = {
+        ...d,
+        areas: d.areas.some((a) => a.id === area.id) ? d.areas.map((a) => (a.id === area.id ? area : a)) : [...d.areas, area],
+      }
+      return goalIds ? setAreaGoals(next, area.id, goalIds) : next
+    })
   }
 
   // Bring earlier wins with this name up to date with a changed template. Undo puts back
@@ -414,7 +419,7 @@ function App() {
             onRestore: (id) => setData((d) => restoreGoal(d, id)),
             onDelete: (id) => setData((d) => removeGoal(d, id)),
           }}
-          areas={{ areas: data.areas, onSave: saveArea, onRemove: (id) => setData((d) => removeArea(d, id)) }}
+          areas={{ areas: data.areas, goals: data.goals, onSave: saveArea, onRemove: (id) => setData((d) => removeArea(d, id)) }}
           // A backup replaces your saved history, but never stops a timer that's running right now.
           backup={{ data, onImport: (imported) => setData((d) => ({ ...imported, timer: d.timer })), onReset: resetEverything }}
         />

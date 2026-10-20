@@ -12,17 +12,18 @@ type Props = {
   onDelete: (id: string) => void
 }
 
-function describe(goal: GoalDef, goals: GoalDef[]): string {
+function describe(goal: GoalDef, goals: GoalDef[], areaNames: string[]): string {
+  const where = areaNames.length > 0 ? ` · ${areaNames.join(', ')}` : ''
   const per = PERIOD_WORDS[goal.period].per
   if (goal.childIds) {
     const n = goal.childIds.filter((id) => goals.some((g) => g.id === id && isActive(g))).length
-    return n === 0 ? 'No goals included yet. Edit it to choose some.' : `Met when all ${n} of its goals are met, ${per}`
+    return n === 0 ? 'No goals included yet. Edit it to choose some.' : `Met when all ${n} of its goals are met, ${per}${where}`
   }
-  if (goalSource(goal) === 'each') return `Each repeatable task tagged to it, once ${per}`
+  if (goalSource(goal) === 'each') return `Each repeatable task tagged to it, once ${per}${where}`
   const target = currentTarget(goal, new Date())
   const rule = RULE_WORDS[goalSource(goal)]?.[goal.kind === 'time' ? 'time' : 'count']
   const amount = goal.kind === 'time' ? formatMinutes(target) : String(target)
-  return `${amount} ${per}${rule ? `, ${rule}` : ''}`
+  return `${amount} ${per}${rule ? `, ${rule}` : ''}${where}`
 }
 
 // How a goal's rule reads in the list. 'linked' is the plain default and needs no words.
@@ -40,7 +41,7 @@ const STARTERS: { label: string; title: string; kind: 'count' | 'time'; source: 
 ]
 
 export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Props) {
-  const { goalColour } = useAreas()
+  const { goalColour, nameOf } = useAreas()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showArchived, setShowArchived] = useState(false)
@@ -89,7 +90,7 @@ export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Pr
                 <span className="dot" style={{ background: goalColour(goal) }} />
                 <div className="grow">
                   <div>{goal.title}</div>
-                  <div className="muted">{describe(goal, goals)}</div>
+                  <div className="muted">{describe(goal, goals, goal.areas.map(nameOf))}</div>
                 </div>
                 <button className="link" onClick={() => setEditingId(goal.id)}>
                   Edit
@@ -139,7 +140,7 @@ export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Pr
                     <span className="dot" style={{ background: goalColour(goal) }} />
                     <div className="grow">
                       <div>{goal.title}</div>
-                      <div className="muted">{describe(goal, goals)}</div>
+                      <div className="muted">{describe(goal, goals, goal.areas.map(nameOf))}</div>
                     </div>
                     <button className="link" onClick={() => onRestore(goal.id)}>
                       Restore

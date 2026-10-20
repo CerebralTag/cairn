@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PERIOD_WORDS, progressLabel } from '../goals'
 import { areaCards, goalDisplay, type AreaCard, type AreaGoal } from '../todayAreas'
 import type { AppData } from '../types'
+import { OTHER_KEY } from '../todayAreas'
 
 const RADIUS = 27
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
@@ -132,6 +133,9 @@ export function AreaRings({ data, now }: { data: AppData; now: Date }) {
           {open.goals.map((item) => (
             <GoalRow key={item.goal.id} item={item} colour={open.colour} />
           ))}
+          {open.key === OTHER_KEY && data.areas.length > 0 && (
+            <p className="muted">These goals have no area yet. Give them one under Manage, Areas.</p>
+          )}
           {open.tasks.map((t) => (
             <div key={t.id} className="goal-row">
               <div className="goal-row-head">
