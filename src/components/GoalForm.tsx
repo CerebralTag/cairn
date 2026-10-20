@@ -71,7 +71,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
     }
 
     // Time targets are typed in hours but stored as minutes.
-    const target = eachRule ? 1 : type === 'time' ? Math.round(parsed * 60) : Math.round(parsed) // 1 just marks that the goal exists
+    const target = eachRule ? 0 : type === 'time' ? Math.round(parsed * 60) : Math.round(parsed) // the real number is set from the tagged tasks
     const base: GoalDef = initial ?? { id: crypto.randomUUID(), title: '', areas: [], kind: type, period, targets: [] }
     // 'linked' is the default and is stored as no value at all. Amount goals always count linked wins.
     const rule: GoalSource = type === 'count' || type === 'time' ? source : 'linked'

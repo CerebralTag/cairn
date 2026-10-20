@@ -22,7 +22,7 @@ type Props = {
 // so earlier wins keep them unless you choose to bring them up to date.
 type Offer = { template: QuickWin; oldTitle: string; weekCount: number; allCount: number; weekStart: Date }
 
-const goalSourceIsLinked = (g: GoalDef) => goalSource(g) === 'linked' || goalSource(g) === 'each'
+const goalTakesTemplates = (g: GoalDef) => goalSource(g) === 'linked' || goalSource(g) === 'each'
 
 function QuickWinForm({
   initial,
@@ -37,6 +37,7 @@ function QuickWinForm({
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   // One number: a plain amount if the template has one, otherwise minutes.
+  const initialKind = initial?.amount ? 'number' : 'time'
   const [measure, setMeasure] = useState<Measure>(
     initial?.amount
       ? { kind: 'number', value: String(initial.amount) }
@@ -47,7 +48,7 @@ function QuickWinForm({
   const [goalIds, setGoalIds] = useState<string[]>(initial?.goalIds ?? [])
 
   // Archived goals aren't offered, but one this quick win is already linked to stays visible.
-  const leafGoals = goals.filter((g) => isTemplateLinkable(g) || (!g.childIds && goalSourceIsLinked(g) && initial?.goalIds.includes(g.id)))
+  const leafGoals = goals.filter((g) => isTemplateLinkable(g) || (!g.childIds && goalTakesTemplates(g) && initial?.goalIds.includes(g.id)))
 
   // Ticking a goal adds its areas; unticking leaves them.
   function toggleGoal(id: string) {
@@ -61,8 +62,14 @@ function QuickWinForm({
     event.preventDefault()
     if (title.trim() === '') return
     const parsed = positiveNumber(measure.value)
-    const parsedAmount = measure.kind === 'number' ? parsed : undefined
-    const parsedMinutes = measure.kind === 'time' ? parsed : undefined
+    let parsedAmount = measure.kind === 'number' ? parsed : undefined
+    let parsedMinutes = measure.kind === 'time' ? parsed : undefined
+    // A template saved earlier with both a time and a number keeps the one the box isn't showing,
+    // unless the box was switched to the other kind (then that was chosen on purpose).
+    if (initial?.amount && initial.minutes && measure.kind === initialKind) {
+      if (measure.kind === 'number') parsedMinutes = initial.minutes
+      else parsedAmount = initial.amount
+    }
     onSave({
       id: initial?.id ?? crypto.randomUUID(),
       title: title.trim(),

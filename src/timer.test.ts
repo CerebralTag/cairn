@@ -135,6 +135,12 @@ describe('a timer started from a repeatable task', () => {
     expect(result.entry).toMatchObject({ minutes: 30, at: at(10) })
   })
 
+  it('dates the win by the corrected session, so it lands in the period you said', () => {
+    const result = stopTimer(running, at(60 * 24 * 9), { minutes: 30, at: at(10) })
+    expect(result.data.wins[0].completedAt).toEqual(at(40))
+    expect(result.entry?.at).toEqual(at(10))
+  })
+
   it('can be undone completely: no win, no time, no extra use', () => {
     const result = stopTimer(running, at(45))
     const undone = undoQuickWin(result.data, result.winId!, result.quickWinId!)

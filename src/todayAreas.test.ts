@@ -81,7 +81,7 @@ describe('eachSteps', () => {
   const chores: GoalDef = { id: 'c', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 1 }] }
   const q = (id: string): QuickWin => ({ id, title: id, areas: [], goalIds: ['c'], uses: 0 })
   it('lists each tagged task and whether it was done this period', () => {
-    const d = { ...data([chores], [doneWin(WED, { origin: 'quick', quickWinId: 'dishes' })]), quickWins: [q('dishes'), q('bins')] }
+    const d = { ...data([chores], [doneWin(WED, { origin: 'quick', quickWinId: 'dishes', goalIds: ['c'] })]), quickWins: [q('dishes'), q('bins')] }
     expect(eachSteps(chores, d, MON)).toEqual([
       { id: 'dishes', title: 'dishes', done: true },
       { id: 'bins', title: 'bins', done: false },

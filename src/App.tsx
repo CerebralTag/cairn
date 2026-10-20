@@ -5,6 +5,7 @@ import { makeSuggest } from './suggest'
 import { SuggestContext } from './suggestContext'
 import { DEFAULT_AREAS } from './areas'
 import { AreaRings } from './components/AreaRings'
+import { areaCards } from './todayAreas'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
 import { NavBar, type Screen } from './components/NavBar'
@@ -22,7 +23,7 @@ import { TodoList } from './components/TodoList'
 import { WinForm } from './components/WinForm'
 import { toDateInput } from './dates'
 import { addLoggedWin, addTask, applyEntryEdit, applyWinEdit, deleteEntry, type TimeEntryPatch, type WinValues } from './edits'
-import { formatMinutes, isActive, linkByArea } from './goals'
+import { formatMinutes, isActive, linkByArea, syncEachGoals } from './goals'
 import { archiveGoal, deleteWin, removeArea, removeGoal, restoreGoal, withStatus } from './manage'
 import { applyQuickWin, applyTemplateToWins, contributionsFor, revertTemplateApplication, undoQuickWin } from './quickWins'
 import { activityFor, dayRange } from './reports'
@@ -250,7 +251,7 @@ function App() {
     setData((d) => {
       const exists = d.goals.some((g) => g.id === goal.id)
       const goals = exists ? d.goals.map((g) => (g.id === goal.id ? goal : g)) : [...d.goals, goal]
-      const next = { ...d, goals }
+      const next = syncEachGoals({ ...d, goals }, new Date())
       return backfill ? { ...next, ...linkByArea(goal, next) } : next
     })
   }
@@ -281,12 +282,17 @@ function App() {
   }
 
   function saveQuickWin(quickWin: QuickWin) {
-    setData((d) => ({
-      ...d,
-      quickWins: d.quickWins.some((q) => q.id === quickWin.id)
-        ? d.quickWins.map((q) => (q.id === quickWin.id ? quickWin : q))
-        : [...d.quickWins, quickWin],
-    }))
+    setData((d) =>
+      syncEachGoals(
+        {
+          ...d,
+          quickWins: d.quickWins.some((q) => q.id === quickWin.id)
+            ? d.quickWins.map((q) => (q.id === quickWin.id ? quickWin : q))
+            : [...d.quickWins, quickWin],
+        },
+        new Date(),
+      ),
+    )
   }
 
   // One tap logs a win; the confirmation says what it counted toward, with Undo.
@@ -385,7 +391,7 @@ function App() {
             addRepeatable,
             onSaveQuickWin: saveQuickWin,
             onApplyTemplateToEarlier: applyTemplateToEarlier,
-            onRemoveQuickWin: (id) => setData((d) => ({ ...d, quickWins: d.quickWins.filter((q) => q.id !== id) })),
+            onRemoveQuickWin: (id) => setData((d) => syncEachGoals({ ...d, quickWins: d.quickWins.filter((q) => q.id !== id) }, new Date())),
             onAdd: handleAddTask,
             onEdit: handleEditWin,
             onSetStatus: setStatus,
@@ -454,7 +460,12 @@ function App() {
         {/* The header: goal rings, and under them a bead for every win finished today. */}
         <section className="card header-card">
           {leafGoals.length > 0 ? (
-            <AreaRings data={data} now={now} />
+            <>
+              <AreaRings data={data} now={now} />
+              {areaCards(data, now).length === 0 && (
+                <p className="muted">Your goals are in areas that are switched off. Turn them on under Manage, Areas.</p>
+              )}
+            </>
           ) : (
             <div>
               <p className="muted">Goals show up here as rings you fill as you go.</p>

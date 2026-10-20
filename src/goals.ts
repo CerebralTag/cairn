@@ -76,13 +76,36 @@ export type EachStep = { id: string; title: string; done: boolean }
 export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): EachStep[] {
   const start = periodStart.getTime()
   const end = periodEnd(goal.period, periodStart).getTime()
-  const doneIds = new Set(
-    data.wins
-      .filter((w) => w.status === 'done' && w.completedAt && w.completedAt.getTime() >= start && w.completedAt.getTime() < end)
-      .map((w) => w.quickWinId),
-  )
+  const doneIds = eachDoneIds(goal, data, start, end)
   return taggedTemplates(goal, data).map((q) => ({ id: q.id, title: q.title, done: doneIds.has(q.id) }))
 }
+
+// The repeatable tasks done in [start, end) that counted toward an "each" goal: finished wins
+// carrying the goal's id (copied from the task when it was tapped, so this stays true even if
+// the task is later renamed, untagged or removed).
+function eachDoneIds(goal: GoalDef, data: AppData, start: number, end: number): Set<string> {
+  const ids = new Set<string>()
+  for (const w of data.wins) {
+    if (w.status !== 'done' || !w.completedAt || !w.quickWinId || !w.goalIds.includes(goal.id)) continue
+    if (w.completedAt.getTime() >= start && w.completedAt.getTime() < end) ids.add(w.quickWinId)
+  }
+  return ids
+}
+
+// "Each" goals take their target from how many tasks are tagged. Whenever that changes, record
+// the new number from the current period on, so earlier periods keep the target they had.
+export function syncEachGoals(data: AppData, now: Date): AppData {
+  let changed = false
+  const goals = data.goals.map((g) => {
+    if (g.childIds || !isActive(g) || goalSource(g) !== 'each') return g
+    const count = taggedTemplates(g, data).length
+    if (g.targets.length > 0 && currentTarget(g, now) === count) return g
+    changed = true
+    return withTarget(g, count, now)
+  })
+  return changed ? { ...data, goals } : data
+}
+
 
 // The target in effect for the period starting at `periodStart`: the latest
 // target whose `from` is on or before it. undefined if the goal didn't exist yet.
@@ -178,7 +201,11 @@ export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): Go
 
   if (goal.childIds && goal.childIds.length > 0) {
     const children = childrenFor(goal, data.goals, periodStart)
-    const results = children.map((c) => progressFor(c, data, periodStart))
+    // An "each" goal with no tasks tagged yet has nothing to meet, so it must not hold the rest back.
+    const results = children
+      .map((c) => ({ c, p: progressFor(c, data, periodStart) }))
+      .filter(({ c, p }) => !(goalSource(c) === 'each' && p.target === 0))
+      .map(({ p }) => p)
     return {
       done: results.filter((r) => r.met).length,
       target: results.length,
@@ -195,16 +222,16 @@ export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): Go
   const source = goalSource(goal)
   let done: number
   if (source === 'each') {
-    // Met when every repeatable task tagged to the goal has a finished win in the period. The
-    // target is how many are tagged now, so adding a chore raises it (earlier periods are
-    // judged against today's list; the stored target only marks that the goal existed).
-    const steps = eachSteps(goal, data, periodStart)
-    const eachDone = steps.filter((s) => s.done).length
+    // Met when as many different repeatable tasks were done in the period as the target says.
+    // The target is the number tagged at the time (kept in the target history by
+    // syncEachGoals), and what was done comes from the wins themselves, so adding or
+    // removing a task later never rewrites a past period.
+    const eachDone = eachDoneIds(goal, data, start, end).size
     return {
       done: eachDone,
-      target: steps.length,
-      fraction: steps.length > 0 ? eachDone / steps.length : 0,
-      met: steps.length > 0 && eachDone >= steps.length,
+      target,
+      fraction: target > 0 ? Math.min(eachDone / target, 1) : 0,
+      met: target > 0 && eachDone >= target,
     }
   }
   if (goal.kind === 'time') {

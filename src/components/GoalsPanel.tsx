@@ -112,7 +112,8 @@ export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Pr
             Add a goal
           </button>
           <div className="chips" aria-label="Quick starts">
-            {STARTERS.map((s) => (
+            {/* A starter you already added isn't offered again (it would just make a twin). */}
+            {STARTERS.filter((s) => !active.some((g) => g.title === s.title)).map((s) => (
               <button key={s.label} className="chip" onClick={() => addStarter(s)}>
                 + {s.label}
               </button>

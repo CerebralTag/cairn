@@ -8,6 +8,7 @@ import {
   isActive,
   isLinkable,
   isTemplateLinkable,
+  syncEachGoals,
   taggedTemplates,
   linkByArea,
   periodEnd,
@@ -423,9 +424,9 @@ describe('goals that count by a rule instead of by tags', () => {
 const NEXT_MON2 = new Date(2026, 9, 19)
 
 describe('a goal met by doing each tagged repeatable task once', () => {
-  const chores: GoalDef = { id: 'chores', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 1 }] }
+  const chores: GoalDef = { id: 'chores', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 3 }] }
   const q = (id: string, goalIds: string[] = ['chores']) => ({ id, title: id, areas: [], goalIds, uses: 0 })
-  const tap = (when: Date, quickWinId: string) => doneWin(when, { origin: 'quick', quickWinId, goalIds: ['chores'] })
+  const tap = (when: Date, quickWinId: string) => doneWin(when, { origin: 'quick', quickWinId, goalIds: quickWinId === 'guitar' ? [] : ['chores'] })
   const base = data([chores], [], [], [], [q('dishes'), q('laundry'), q('bins'), q('guitar', [])])
 
   it('counts each tagged task once, however often it was done', () => {
@@ -445,10 +446,32 @@ describe('a goal met by doing each tagged repeatable task once', () => {
     expect(progressFor(chores, d, NEXT_MON2).done).toBe(1)
   })
 
-  it('grows when another task is tagged, and is not met with nothing tagged', () => {
+  it('tagging another task raises this period\'s target but never changes a past period\'s', () => {
     const done = { ...base, wins: [tap(MON, 'dishes'), tap(MON, 'laundry'), tap(MON, 'bins')] }
-    expect(progressFor(chores, { ...done, quickWins: [...done.quickWins, q('mop')] }, MON).met).toBe(false)
-    expect(progressFor(chores, { ...base, quickWins: [] }, MON)).toMatchObject({ done: 0, target: 0, met: false })
+    expect(progressFor(chores, done, MON).met).toBe(true)
+    const grown = syncEachGoals({ ...done, quickWins: [...done.quickWins, q('mop')] }, NEXT_MON2)
+    expect(progressFor(grown.goals[0], grown, NEXT_MON2).target).toBe(4)
+    expect(progressFor(grown.goals[0], grown, MON)).toMatchObject({ done: 3, target: 3, met: true }) // last week keeps its hit
+  })
+
+  it('removing a task never erases a past hit', () => {
+    const done = { ...base, wins: [tap(MON, 'dishes'), tap(MON, 'laundry'), tap(MON, 'bins')] }
+    const removed = syncEachGoals({ ...done, quickWins: done.quickWins.filter((t) => t.id !== 'bins') }, NEXT_MON2)
+    expect(progressFor(removed.goals[0], removed, MON).met).toBe(true)
+    expect(progressFor(removed.goals[0], removed, NEXT_MON2).target).toBe(2)
+  })
+
+  it('has nothing to meet until something is tagged, and then does not hold an overarching goal back', () => {
+    const empty = { ...base, quickWins: [], goals: [{ ...chores, targets: [{ from: SINCE, amount: 0 }] }] }
+    expect(progressFor(empty.goals[0], empty, MON)).toMatchObject({ done: 0, target: 0, met: false })
+    const other: GoalDef = { ...chores, id: 'o', source: undefined, kind: 'count', targets: [{ from: SINCE, amount: 1 }] }
+    const overall: GoalDef = { id: 'all', title: 'All', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['chores', 'o'] }
+    const d = { ...empty, goals: [empty.goals[0], other, overall], wins: [doneWin(MON, { goalIds: ['o'] })] }
+    expect(progressFor(overall, d, MON).met).toBe(true)
+  })
+
+  it('syncEachGoals leaves other goals and unchanged targets alone', () => {
+    expect(syncEachGoals(base, MON)).toBe(base)
   })
 
   it('is offered to repeatable tasks but not to ordinary wins', () => {

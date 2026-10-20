@@ -45,7 +45,11 @@ export function stopTimer(
   // Started from a repeatable task: the session is a finished win from it, with the time attached.
   // (If the template was removed meanwhile, fall through and keep the time as a standalone entry.)
   if (timer.quickWinId) {
-    const logged = applyQuickWin(data, timer.quickWinId, now, { minutes, startedAt: options.at ?? timer.startedAt })
+    // The win is dated when the session ended: now, or (for a corrected forgotten timer) the
+    // corrected start plus its length, so it lands in the period you said it happened in.
+    const startedAt = options.at ?? timer.startedAt
+    const endedAt = options.at ? new Date(Math.min(now.getTime(), options.at.getTime() + minutes * 60_000)) : now
+    const logged = applyQuickWin(data, timer.quickWinId, now, { minutes, startedAt, at: endedAt })
     if (logged) {
       const entry = logged.data.timeEntries.find((e) => e.winId === logged.winId) ?? null
       return { data: { ...logged.data, timer: null }, entry, quickWinId: timer.quickWinId, winId: logged.winId }

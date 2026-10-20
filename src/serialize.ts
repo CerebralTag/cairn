@@ -119,6 +119,17 @@ function validEntry(e: unknown): boolean {
   )
 }
 
+// Only some rules make sense for each kind of goal (the app never makes the others).
+const SOURCES_FOR_KIND: Record<string, string[]> = {
+  time: ['linked', 'any'],
+  count: SOURCES,
+  amount: ['linked'],
+  completion: ['linked'],
+}
+function sourceFitsKind(kind: unknown, source: unknown): boolean {
+  return source === undefined || source === null || (isString(kind) && (SOURCES_FOR_KIND[kind] ?? []).includes(source as string))
+}
+
 function validGoal(g: unknown): boolean {
   return (
     isRecord(g) &&
@@ -132,7 +143,8 @@ function validGoal(g: unknown): boolean {
     g.targets.every((t) => isRecord(t) && validDate(t.from) && isNumber(t.amount)) &&
     optional(g.childIds, isStringArray) &&
     optional(g.archivedAt, validDate) &&
-    optional(g.source, (s) => isString(s) && SOURCES.includes(s))
+    optional(g.source, (s) => isString(s) && SOURCES.includes(s)) &&
+    sourceFitsKind(g.kind, g.source)
   )
 }
 

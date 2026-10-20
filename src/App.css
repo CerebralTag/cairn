@@ -33,16 +33,12 @@
 }
 
 .area-ring-row {
-  display: flex;
-  flex-wrap: wrap; /* a fifth area drops to a second row instead of squeezing */
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)); /* equal rings; a fifth area starts a second row */
   gap: 8px 4px;
 }
 
 .area-ring {
-  flex: 1 1 0;
-  min-width: 76px;
-  max-width: 96px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -60,9 +56,12 @@
 }
 
 .area-ring-name {
+  max-width: 100%;
   font-size: 0.8rem;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis; /* the full name is in the button's label for screen readers */
+  white-space: nowrap;
 }
 
 .area-goals {
@@ -581,6 +580,8 @@
 }
 
 .chip-pair .chip.play {
+  min-width: 44px;
+  min-height: 44px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   border-left: 0;

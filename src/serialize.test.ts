@@ -4,7 +4,7 @@ import { backupFilename, backupText, describeAgo, summarise } from './backup'
 import { DEFAULT_AREAS } from './areas'
 import { targetFor } from './goals'
 import { deserialize, serialize, serializeChecked } from './serialize'
-import { data, doneWin, guitar, session, todo } from './testHelpers'
+import { data, doneWin, guitar, session, todo, workouts } from './testHelpers'
 
 const NOW = new Date(2026, 9, 18, 10, 30)
 
@@ -253,7 +253,7 @@ describe('task origin and goal rules survive saving and are validated', () => {
   it('round-trips origin, quickWinId and a goal rule', () => {
     const withExtras = {
       ...sample,
-      goals: [{ ...guitar, source: 'each' as const }],
+      goals: [{ ...workouts, source: 'each' as const }],
       wins: [{ ...sample.wins[0], origin: 'quick' as const, quickWinId: 'q1' }, { ...sample.wins[1], origin: 'todo' as const }],
     }
     expect(deserialize(serialize(withExtras))).toEqual(withExtras)
@@ -276,5 +276,15 @@ describe('areas on Today', () => {
     const raw = JSON.parse(serialize(off))
     raw.areas[0].onToday = 'no'
     expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
+  })
+})
+
+describe('goal rules must fit the goal kind', () => {
+  it('rejects a rule the app never makes, such as a time goal that counts to-dos', () => {
+    const raw = JSON.parse(serialize({ ...sample, goals: [guitar] }))
+    raw.goals[0].source = 'todo'
+    expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
+    raw.goals[0].source = 'any'
+    expect(() => deserialize(JSON.stringify(raw))).not.toThrow()
   })
 })
