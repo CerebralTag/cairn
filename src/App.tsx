@@ -466,20 +466,17 @@ function App() {
 
         {/* The header: goal rings, and under them a bead for every win finished today. */}
         <section className="card header-card">
-          {leafGoals.length > 0 ? (
-            <>
-              <AreaRings data={data} now={now} />
-              {areaCards(data, now).length === 0 && (
-                <p className="muted">Your goals are in areas that are switched off. Turn them on under Manage, Areas.</p>
-              )}
-            </>
-          ) : (
+          <AreaRings data={data} now={now} />
+          {leafGoals.length === 0 && (
             <div>
-              <p className="muted">Goals show up here as rings you fill as you go.</p>
+              <p className="muted">Goals fill the rings as you go.</p>
               <button className="link" onClick={() => openManage('goals')}>
                 Add your first goal
               </button>
             </div>
+          )}
+          {leafGoals.length > 0 && areaCards(data, now).length === 0 && (
+            <p className="muted">Your goals are in areas that are switched off. Turn them on under Manage, Areas.</p>
           )}
           <TodayBeads items={todayItems} onEdit={setEditingKey} />
         </section>

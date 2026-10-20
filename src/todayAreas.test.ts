@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { OTHER_KEY, areaCards, goalDisplay } from './todayAreas'
 import { eachSteps } from './goals'
-import { SINCE, data, doneWin, guitar, session, squats, workouts } from './testHelpers'
+import { SINCE, data, doneWin, guitar, session, squats, todo, workouts } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
 
 const MON = new Date(2026, 9, 12)
@@ -31,11 +31,30 @@ describe('areaCards', () => {
     expect(areaCards(d, WED)[0].fraction).toBeCloseTo(0.5)
   })
 
-  it('leaves out areas switched off, and areas with no goals', () => {
+  it('gives every area switched on a ring, and none to one switched off', () => {
     const d = withAreas(data([{ ...guitar, areas: ['work'] }]))
-    expect(areaCards(d, WED)).toEqual([])
+    expect(areaCards(d, WED).map((c) => c.key)).toEqual(['music', 'health']) // work is off
     expect(areaCards({ ...d, areas: [{ id: 'work', name: 'Work', colour: 3 }] }, WED).map((c) => c.key)).toEqual(['work'])
-    expect(areaCards(withAreas(data([])), WED)).toEqual([])
+  })
+
+  it('an area with nothing assigned is complete and reads 0/0', () => {
+    const [music] = areaCards(withAreas(data([])), WED)
+    expect(music).toMatchObject({ total: 0, met: 0, fraction: 1, goals: [], tasks: [] })
+  })
+
+  it('counts to-dos assigned to the area: open ones are not done, ones finished this week are', () => {
+    const open = todo({ id: 'a', title: 'Fix shelf', areas: ['music'] })
+    const done = { ...doneWin(WED, { id: 'b', title: 'Tune up', areas: ['music'] }), origin: 'todo' as const }
+    const old = { ...doneWin(new Date(2026, 9, 1), { id: 'c', areas: ['music'] }), origin: 'todo' as const }
+    const dropped = { ...todo({ id: 'd', areas: ['music'] }), status: 'dropped' as const }
+    const other = todo({ id: 'e', areas: ['health'] })
+    const d = withAreas(data([], [{ ...open, origin: 'todo' as const }, done, old, dropped, { ...other, origin: 'todo' as const }]))
+    const [music] = areaCards(d, WED)
+    expect(music.tasks).toEqual([
+      { id: 'a', title: 'Fix shelf', done: false },
+      { id: 'b', title: 'Tune up', done: true },
+    ])
+    expect(music).toMatchObject({ total: 2, met: 1, fraction: 0.5 })
   })
 
   it('shows a goal under every area it is labelled with', () => {
@@ -47,16 +66,16 @@ describe('areaCards', () => {
     const loose: GoalDef = { ...squats, areas: [] }
     const orphan: GoalDef = { ...workouts, areas: ['gone'] }
     const cards = areaCards(withAreas(data([loose, orphan])), WED)
-    expect(cards).toHaveLength(1)
-    expect(cards[0]).toMatchObject({ key: OTHER_KEY, name: 'Other' })
-    expect(cards[0].goals).toHaveLength(2)
+    const other = cards.find((c) => c.key === OTHER_KEY)!
+    expect(other).toMatchObject({ name: 'Other', total: 2 })
+    expect(cards.at(-1)).toBe(other)
     expect(areaCards({ ...data([loose]), areas: [] }, WED)[0].name).toBe('Goals')
   })
 
   it('leaves out archived goals and overarching goals', () => {
     const archived: GoalDef = { ...guitar, archivedAt: SINCE }
     const overall: GoalDef = { id: 'o', title: 'O', areas: ['music'], kind: 'completion', period: 'week', targets: [], childIds: ['guitar'] }
-    expect(areaCards(withAreas(data([archived, overall])), WED)).toEqual([])
+    expect(areaCards(withAreas(data([archived, overall])), WED).flatMap((c) => c.goals)).toEqual([])
   })
 })
 

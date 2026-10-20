@@ -9,12 +9,11 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 // An area's ring: filled by the average progress of its goals; the middle says how many are met.
 function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: boolean; onSelect: () => void }) {
   const filled = card.fraction * CIRCUMFERENCE
-  const allMet = card.met === card.goals.length
   return (
     <button
       className={selected ? 'area-ring on' : 'area-ring'}
       aria-pressed={selected}
-      aria-label={`${card.name}, ${card.met} of ${card.goals.length} goals met`}
+      aria-label={`${card.name}, ${card.met} of ${card.total} done`}
       onClick={onSelect}
     >
       <svg viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">
@@ -34,7 +33,7 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
           />
         )}
         <text x="36" y="41" textAnchor="middle" fontSize="15" fontWeight="700" fill="var(--color-text)">
-          {allMet ? '✓' : `${card.met}/${card.goals.length}`}
+          {`${card.met}/${card.total}`}
         </text>
       </svg>
       <span className="area-ring-name">{card.name}</span>
@@ -132,6 +131,14 @@ export function AreaRings({ data, now }: { data: AppData; now: Date }) {
         <div className="area-goals" aria-label={`${open.name} goals`}>
           {open.goals.map((item) => (
             <GoalRow key={item.goal.id} item={item} colour={open.colour} />
+          ))}
+          {open.tasks.map((t) => (
+            <div key={t.id} className="goal-row">
+              <div className="goal-row-head">
+                <span className="goal-row-title">{t.title}</span>
+                {t.done && <Bubble on colour={open.colour} />}
+              </div>
+            </div>
           ))}
         </div>
       )}

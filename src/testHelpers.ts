@@ -18,14 +18,14 @@ export function doneWin(
   }
 }
 
-export function todo(opts: { id?: string; status?: 'todo' | 'doing'; goalIds?: string[]; title?: string } = {}): Win {
+export function todo(opts: { id?: string; status?: 'todo' | 'doing'; goalIds?: string[]; areas?: Area[]; title?: string } = {}): Win {
   return {
     id: opts.id ?? crypto.randomUUID(),
     title: opts.title ?? 'task',
     status: opts.status ?? 'todo',
     createdAt: new Date(2026, 0, 1),
     goalIds: opts.goalIds ?? [],
-    areas: [],
+    areas: opts.areas ?? [],
   }
 }
 
