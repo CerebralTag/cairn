@@ -66,11 +66,14 @@ describe('how a goal row is drawn', () => {
     expect(goalDisplay(guitar, p(120))).toBe('bar')
     expect(goalDisplay(squats, p(3))).toBe('bar') // amount goal
   })
+  it('lists just the name for a single task', () => {
+    expect(goalDisplay({ ...workouts, kind: 'completion' }, p(1))).toBe('task')
+    expect(goalDisplay(workouts, p(1))).toBe('task') // a count of one is just a task
+  })
   it('uses bubbles for small counts, a bar for big ones', () => {
     expect(goalDisplay(workouts, p(3))).toBe('bubbles')
     expect(goalDisplay(workouts, p(6))).toBe('bubbles')
     expect(goalDisplay(workouts, p(7))).toBe('bar')
-    expect(goalDisplay({ ...workouts, kind: 'completion' }, p(1))).toBe('bubbles')
   })
   it('uses a labelled bubble per task for an each goal', () => {
     expect(goalDisplay({ ...workouts, source: 'each' }, p(4))).toBe('steps')

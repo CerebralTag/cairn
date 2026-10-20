@@ -7,13 +7,14 @@ import type { AppData } from '../types'
 type Props = {
   data: AppData
   onImport: (data: AppData) => void
+  onReset: () => void // erase everything (for testing)
 }
 
 type Pending = { data: AppData; fileName: string }
 
 // Everything lives on this device, so the backup file is the safety net. The
 // note about the last backup is informational only: no warnings, no nagging.
-export function BackupPanel({ data, onImport }: Props) {
+export function BackupPanel({ data, onImport, onReset }: Props) {
   const [lastBackup, setLastBackup] = useState<Date | null>(null)
   const [now] = useState(() => new Date())
   const [message, setMessage] = useState<string | null>(null)
@@ -111,6 +112,19 @@ export function BackupPanel({ data, onImport }: Props) {
             </div>
           </div>
         )}
+      </section>
+
+      <section className="card">
+        <h2>Start over</h2>
+        <p className="muted">Erases every win, goal, task, area and timer on this device and starts fresh, handy for testing. Export a backup first if you want to keep anything.</p>
+        <button
+          className="secondary"
+          onClick={() => {
+            if (window.confirm('Erase everything on this device and start over?')) onReset()
+          }}
+        >
+          Erase everything
+        </button>
       </section>
 
       {message && (

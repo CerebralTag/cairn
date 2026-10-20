@@ -17,14 +17,16 @@ export type AreaCard = {
 
 export const OTHER_KEY = '__other'
 
-// How a goal row draws itself: a labelled bubble per task, a bubble per count for small
-// counts, otherwise a bar. (Overarching goals have their own card and never come here.)
-export type GoalDisplay = 'steps' | 'bubbles' | 'bar'
+// How a goal row draws itself: just the name for a single task, a labelled bubble per task,
+// a bubble per count for small counts, otherwise a bar. (Overarching goals have their own card and never come here.)
+export type GoalDisplay = 'task' | 'steps' | 'bubbles' | 'bar'
 export const MAX_BUBBLES = 6
 
 export function goalDisplay(goal: GoalDef, progress: GoalProgress): GoalDisplay {
   if (goalSource(goal) === 'each') return 'steps'
-  if ((goal.kind === 'count' || goal.kind === 'completion') && progress.target >= 1 && progress.target <= MAX_BUBBLES) return 'bubbles'
+  // Just a task, nothing to measure: list its name (a ✓ appears when it is done).
+  if (goal.kind === 'completion' || (goal.kind === 'count' && progress.target === 1)) return 'task'
+  if (goal.kind === 'count' && progress.target >= 1 && progress.target <= MAX_BUBBLES) return 'bubbles'
   return 'bar'
 }
 

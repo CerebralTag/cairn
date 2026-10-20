@@ -11,7 +11,7 @@ import { ManageScreen, type ManageTab } from './components/ManageScreen'
 import { NavBar, type Screen } from './components/NavBar'
 import { OverallCard } from './components/OverallCard'
 import { QuickWinAsk } from './components/QuickWinAsk'
-import { QuickWinChips } from './components/QuickWinChips'
+import { RepeatableRow } from './components/RepeatableRow'
 import { RecoveryScreen } from './components/RecoveryScreen'
 import { TimerCard } from './components/TimerCard'
 import { TodayBeads } from './components/TodayBeads'
@@ -245,6 +245,13 @@ function App() {
     beginTimer({ title: template.title, quickWinId, areas: template.areas, goalIds: template.goalIds })
   }
 
+  // Start over, for testing: everything is erased, with Undo for a moment in case it was a slip.
+  function resetEverything() {
+    const before = data
+    setData({ ...emptyData })
+    setToast({ id: crypto.randomUUID(), message: 'Everything was erased.', undo: () => setData(before) })
+  }
+
   // ----- goals, areas, quick wins -----
 
   function saveGoal(goal: GoalDef, backfill: boolean) {
@@ -409,7 +416,7 @@ function App() {
           }}
           areas={{ areas: data.areas, onSave: saveArea, onRemove: (id) => setData((d) => removeArea(d, id)) }}
           // A backup replaces your saved history, but never stops a timer that's running right now.
-          backup={{ data, onImport: (imported) => setData((d) => ({ ...imported, timer: d.timer })) }}
+          backup={{ data, onImport: (imported) => setData((d) => ({ ...imported, timer: d.timer })), onReset: resetEverything }}
         />
         {toastEl}
         {nav}
@@ -494,7 +501,8 @@ function App() {
             <button className="did-something" onClick={() => setLogging(true)}>
               I did something
             </button>
-            {!timerRunning && (
+            {/* With repeatable tasks, one row does logging and timing; without, the plain timer button. */}
+            {data.quickWins.length === 0 && !timerRunning && (
               <button className="secondary" onClick={() => setStartingTimer(true)}>
                 ▶ Start a timer
               </button>
@@ -506,18 +514,25 @@ function App() {
                 onLog={(minutes) => tapQuickWin(askingQuickId, { minutes })}
                 onCancel={() => setAskingQuickId(null)}
               />
-            ) : (
-              <QuickWinChips
+            ) : data.quickWins.length > 0 ? (
+              <RepeatableRow
                 quickWins={data.quickWins}
-                onTap={(id) => tapQuickWin(id)}
-                onStartTimer={timerRunning ? undefined : beginQuickTimer}
-                onManage={() => openManage('tasks', true)}
+                timerRunning={timerRunning}
+                onLog={(id) => tapQuickWin(id)}
+                onStart={beginQuickTimer}
+                onElseLog={() => setLogging(true)}
+                onElseStart={() => setStartingTimer(true)}
               />
+            ) : (
+              <button className="link" onClick={() => openManage('tasks', true)}>
+                + Add repeatable tasks for things you do often
+              </button>
             )}
           </>
         )}
 
-        <TodayWins items={todayItems} editor={todayEditor} />
+        {/* No wins yet today: no section (an empty box feels like a to-do). */}
+        {todayItems.length > 0 && <TodayWins items={todayItems} editor={todayEditor} />}
         <TodoList
           tasks={unfinished}
           goals={data.goals}

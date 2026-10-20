@@ -54,6 +54,16 @@ function Bubble({ on, colour, big }: { on: boolean; colour: string; big?: boolea
 function GoalRow({ item, colour }: { item: AreaGoal; colour: string }) {
   const { goal, progress, steps } = item
   const display = goalDisplay(goal, progress)
+  if (display === 'task') {
+    return (
+      <div className="goal-row">
+        <div className="goal-row-head">
+          <span className="goal-row-title">{goal.title}</span>
+          {progress.met && <Bubble on colour={colour} />}
+        </div>
+      </div>
+    )
+  }
   const label = display === 'steps' ? `${progress.done} of ${progress.target}` : progressLabel(goal, progress)
 
   return (

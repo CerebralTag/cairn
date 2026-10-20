@@ -555,10 +555,6 @@
 }
 
 /* Quick wins */
-.chip.quick {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
 
 .measure {
   display: flex;
@@ -570,23 +566,26 @@
   min-width: 0;
 }
 
-.chip-pair {
-  display: inline-flex;
+.repeat-row {
+  display: flex;
+  gap: 8px;
 }
 
-.chip-pair .chip.quick:first-child {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+.repeat-row select {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
 }
 
-.chip-pair .chip.play {
-  min-width: 44px;
-  min-height: 44px;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: 0;
-  padding-left: 10px;
-  padding-right: 12px;
+.repeat-row .secondary {
+  width: auto;
+  padding: 12px 14px;
+  white-space: nowrap;
 }
 
 .chip.more {
