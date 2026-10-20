@@ -122,4 +122,5 @@ export type AppData = {
   goals: GoalDef[]
   wins: Win[]
   timeEntries: TimeEntry[]
+  otherOnToday?: boolean // false hides the "Other" ring (goals with no area) on Today; absent means shown
 }

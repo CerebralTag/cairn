@@ -288,3 +288,14 @@ describe('goal rules must fit the goal kind', () => {
     expect(() => deserialize(JSON.stringify(raw))).not.toThrow()
   })
 })
+
+describe('the Other ring switch', () => {
+  it('round-trips Other switched off, and rejects a non-boolean', () => {
+    const off = { ...sample, otherOnToday: false }
+    expect(deserialize(serialize(off)).otherOnToday).toBe(false)
+    expect(deserialize(serialize(sample)).otherOnToday).toBeUndefined()
+    const raw = JSON.parse(serialize(off))
+    raw.otherOnToday = 'no'
+    expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
+  })
+})

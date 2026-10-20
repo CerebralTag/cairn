@@ -419,7 +419,7 @@ function App() {
             onRestore: (id) => setData((d) => restoreGoal(d, id)),
             onDelete: (id) => setData((d) => removeGoal(d, id)),
           }}
-          areas={{ areas: data.areas, goals: data.goals, onSave: saveArea, onRemove: (id) => setData((d) => removeArea(d, id)) }}
+          areas={{ areas: data.areas, goals: data.goals, otherOnToday: data.otherOnToday !== false, onOtherOnToday: (on) => setData((d) => ({ ...d, otherOnToday: on ? undefined : false })), onSave: saveArea, onRemove: (id) => setData((d) => removeArea(d, id)) }}
           // A backup replaces your saved history, but never stops a timer that's running right now.
           backup={{ data, onImport: (imported) => setData((d) => ({ ...imported, timer: d.timer })), onReset: resetEverything }}
         />

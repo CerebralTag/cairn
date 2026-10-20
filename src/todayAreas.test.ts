@@ -72,6 +72,12 @@ describe('areaCards', () => {
     expect(areaCards({ ...data([loose]), areas: [] }, WED)[0].name).toBe('Goals')
   })
 
+  it('leaves out the Other ring when it is switched off', () => {
+    const loose: GoalDef = { ...squats, areas: [] }
+    expect(areaCards({ ...withAreas(data([loose])), otherOnToday: false }, WED).some((c) => c.key === OTHER_KEY)).toBe(false)
+    expect(areaCards(withAreas(data([loose])), WED).some((c) => c.key === OTHER_KEY)).toBe(true)
+  })
+
   it('leaves out archived goals and overarching goals', () => {
     const archived: GoalDef = { ...guitar, archivedAt: SINCE }
     const overall: GoalDef = { id: 'o', title: 'O', areas: ['music'], kind: 'completion', period: 'week', targets: [], childIds: ['guitar'] }

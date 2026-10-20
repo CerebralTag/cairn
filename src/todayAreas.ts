@@ -76,6 +76,6 @@ export function areaCards(data: AppData, now: Date): AreaCard[] {
   // Goals with no area (or only areas that no longer exist) are kept together so none vanish.
   const known = new Set(data.areas.map((a) => a.id))
   const loose = leaf.filter((g) => !g.areas.some((a) => known.has(a)))
-  if (loose.length > 0) cards.push(card(OTHER_KEY, data.areas.length === 0 ? 'Goals' : 'Other', NEUTRAL_COLOUR, loose))
+  if (loose.length > 0 && data.otherOnToday !== false) cards.push(card(OTHER_KEY, data.areas.length === 0 ? 'Goals' : 'Other', NEUTRAL_COLOUR, loose))
   return cards
 }

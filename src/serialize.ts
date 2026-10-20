@@ -26,6 +26,7 @@ type Stored = {
   areas?: AreaDef[]
   quickWins?: QuickWin[]
   timer?: (Omit<ActiveTimer, 'startedAt'> & { startedAt: string }) | null
+  otherOnToday?: boolean
   goals: StoredGoal[]
   wins: StoredWin[]
   timeEntries: StoredEntry[]
@@ -221,7 +222,7 @@ export function deserialize(text: string): AppData {
     throw new Error("That doesn't look like a Cairn backup (or it's from a different version).")
   }
 
-  const { goals, wins, timeEntries, areas, quickWins, timer } = raw
+  const { goals, wins, timeEntries, areas, quickWins, timer, otherOnToday } = raw
   if (!Array.isArray(goals) || !Array.isArray(wins) || !Array.isArray(timeEntries)) throw new Error(INCOMPLETE)
   if (areas !== undefined && !Array.isArray(areas)) throw new Error(INCOMPLETE)
   if (quickWins !== undefined && !Array.isArray(quickWins)) throw new Error(INCOMPLETE)
@@ -233,6 +234,7 @@ export function deserialize(text: string): AppData {
     (areas ?? []).every(validArea) &&
     (quickWins ?? []).every(validQuickWin) &&
     optional(timer, validTimer) &&
+    optional(otherOnToday, (v) => typeof v === 'boolean') &&
     hasUniqueIds(goals as { id: unknown }[]) &&
     hasUniqueIds(wins as { id: unknown }[]) &&
     hasUniqueIds(timeEntries as { id: unknown }[]) &&
@@ -246,6 +248,7 @@ export function deserialize(text: string): AppData {
     // Data saved before areas became editable has no `areas`: seed the starters.
     areas: stored.areas ?? DEFAULT_AREAS,
     quickWins: stored.quickWins ?? [],
+    ...(stored.otherOnToday === false ? { otherOnToday: false } : {}),
     timer: stored.timer ? { ...stored.timer, startedAt: new Date(stored.timer.startedAt) } : null,
     goals: stored.goals.map((g) => ({
       ...reviveGoal(g),

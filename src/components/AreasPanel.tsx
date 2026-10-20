@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { PALETTE_SIZE, paletteColour } from '../areas'
+import { NEUTRAL_COLOUR, PALETTE_SIZE, paletteColour } from '../areas'
 import { fileableGoals } from '../areaGoals'
 import type { AreaDef, GoalDef } from '../types'
 
 type Props = {
   areas: AreaDef[]
   goals: GoalDef[]
+  otherOnToday: boolean
+  onOtherOnToday: (on: boolean) => void
   onSave: (area: AreaDef, goalIds?: string[]) => void
   onRemove: (id: string) => void
 }
@@ -77,7 +79,7 @@ function AreaForm({ initial, areas, goals, onSave, onCancel }: FormProps) {
   )
 }
 
-export function AreasPanel({ areas, goals, onSave, onRemove }: Props) {
+export function AreasPanel({ areas, goals, otherOnToday, onOtherOnToday, onSave, onRemove }: Props) {
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -126,6 +128,17 @@ export function AreasPanel({ areas, goals, onSave, onRemove }: Props) {
             ),
           )}
           {areas.length === 0 && <li className="muted">No areas yet.</li>}
+          {/* Always here, and can't be removed: the ring for goals that have no area. */}
+          <li>
+            <span className="dot" style={{ background: NEUTRAL_COLOUR }} />
+            <div className="grow">
+              Other <span className="muted">goals with no area</span>
+            </div>
+            <label className="check-row" title="Give goals with no area a ring on Today">
+              <input type="checkbox" checked={otherOnToday} onChange={(e) => onOtherOnToday(e.target.checked)} />
+              On Today
+            </label>
+          </li>
         </ul>
       </section>
 
