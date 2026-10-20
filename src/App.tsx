@@ -54,6 +54,7 @@ function App() {
   const [askingQuickId, setAskingQuickId] = useState<string | null>(null) // repeatable task waiting for its minutes
   const [editingKey, setEditingKey] = useState<string | null>(null) // the Today entry being fixed
   const [screen, setScreen] = useState<Screen>('today')
+  const [addRepeatable, setAddRepeatable] = useState(false) // Manage opened straight to a new repeatable task
   const [manageTab, setManageTab] = useState<ManageTab>('tasks')
   const [toast, setToast] = useState<ToastState | null>(null)
   // Loading is async, so there is a moment where we have no data yet. Until
@@ -146,7 +147,8 @@ function App() {
     }
   }, [])
 
-  function openManage(tab: ManageTab) {
+  function openManage(tab: ManageTab, newRepeatable = false) {
+    setAddRepeatable(newRepeatable)
     setManageTab(tab)
     setScreen('manage')
   }
@@ -341,6 +343,7 @@ function App() {
       onChange={(next) => {
         setToast(null) // an Undo offered on one screen shouldn't resurface on another
         setEditingKey(null)
+        setAddRepeatable(false)
         setScreen(next)
       }}
     />
@@ -379,6 +382,7 @@ function App() {
             goals: data.goals,
             timeEntries: data.timeEntries,
             quickWins: data.quickWins,
+            addRepeatable,
             onSaveQuickWin: saveQuickWin,
             onApplyTemplateToEarlier: applyTemplateToEarlier,
             onRemoveQuickWin: (id) => setData((d) => ({ ...d, quickWins: d.quickWins.filter((q) => q.id !== id) })),
@@ -500,7 +504,7 @@ function App() {
                 quickWins={data.quickWins}
                 onTap={(id) => tapQuickWin(id)}
                 onStartTimer={timerRunning ? undefined : beginQuickTimer}
-                onManage={() => openManage('tasks')}
+                onManage={() => openManage('tasks', true)}
               />
             )}
           </>

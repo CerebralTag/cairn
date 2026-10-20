@@ -13,6 +13,7 @@ type Props = {
   goals: GoalDef[]
   timeEntries: TimeEntry[]
   quickWins: QuickWin[]
+  addRepeatable?: boolean // open the repeatable-task section with its add form
   onSaveQuickWin: (quickWin: QuickWin) => void
   onApplyTemplateToEarlier: (template: QuickWin, oldTitle: string, since?: Date) => void
   onRemoveQuickWin: (id: string) => void
@@ -32,6 +33,7 @@ export function TasksPanel({
   goals,
   timeEntries,
   quickWins,
+  addRepeatable,
   onSaveQuickWin,
   onApplyTemplateToEarlier,
   onRemoveQuickWin,
@@ -174,6 +176,7 @@ export function TasksPanel({
   return (
     <>
       <QuickWinsSection
+        startAdding={addRepeatable}
         quickWins={quickWins}
         goals={goals}
         wins={wins}

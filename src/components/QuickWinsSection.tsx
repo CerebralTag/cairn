@@ -8,6 +8,7 @@ import { AreaChips } from './AreaChips'
 import { MeasureField, type Measure } from './MeasureField'
 
 type Props = {
+  startAdding?: boolean // arrive open, with the add form showing
   quickWins: QuickWin[]
   goals: GoalDef[]
   wins: Win[] // to count the earlier wins a changed template could be applied to
@@ -121,10 +122,10 @@ function QuickWinForm({
 }
 
 // Lives at the top of Manage > Tasks so it doesn't need a tab of its own.
-export function QuickWinsSection({ quickWins, goals, wins, onSave, onRemove, onApplyToEarlier }: Props) {
+export function QuickWinsSection({ startAdding = false, quickWins, goals, wins, onSave, onRemove, onApplyToEarlier }: Props) {
   const { colourOf } = useAreas()
-  const [open, setOpen] = useState(false)
-  const [adding, setAdding] = useState(false)
+  const [open, setOpen] = useState(startAdding)
+  const [adding, setAdding] = useState(startAdding)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [offer, setOffer] = useState<Offer | null>(null)
 
