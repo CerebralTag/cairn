@@ -26,20 +26,142 @@
   font-size: 0.85rem;
 }
 
-.rings {
+.area-rings {
   display: flex;
-  flex-wrap: wrap; /* a fifth goal drops to a new row instead of squeezing or overflowing */
+  flex-direction: column;
+  gap: 8px;
+}
+
+.area-ring-row {
+  display: flex;
+  flex-wrap: wrap; /* a fifth area drops to a second row instead of squeezing */
   justify-content: space-around;
-  gap: 16px 8px;
-  text-align: center;
+  gap: 8px 4px;
 }
 
-.ring {
+.area-ring {
+  flex: 1 1 0;
+  min-width: 76px;
   max-width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-text);
 }
 
-.ring-title {
+.area-ring.on {
+  background: color-mix(in srgb, var(--color-border) 45%, var(--color-surface));
+  border-color: var(--color-border);
+}
+
+.area-ring-name {
+  font-size: 0.8rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.area-goals {
+  display: flex;
+  flex-direction: column;
+}
+
+.goal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.goal-row:first-child {
+  border-top: 0;
+}
+
+.goal-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.goal-row-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.nowrap {
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.goal-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-ring-track);
+  overflow: hidden;
+}
+
+.goal-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.bubbles,
+.steps {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 52px;
+  font-size: 0.75rem;
+}
+
+.step-name {
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.bubble {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--color-ring-track);
+  background: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--color-on-dark);
+}
+
+.bubble.on {
+  border-color: transparent;
+}
+
+.bubble.big {
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .did-something {
@@ -621,8 +743,6 @@
 }
 
 /* Long titles wrap instead of spilling over their neighbours */
-.ring,
-.ring-title,
 .timer-title,
 .list li .grow,
 .overall-head strong,

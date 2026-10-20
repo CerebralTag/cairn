@@ -3,7 +3,8 @@ import './App.css'
 import { AreasContext } from './areasContext'
 import { makeSuggest } from './suggest'
 import { SuggestContext } from './suggestContext'
-import { GoalRing } from './components/GoalRing'
+import { DEFAULT_AREAS } from './areas'
+import { AreaRings } from './components/AreaRings'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
 import { NavBar, type Screen } from './components/NavBar'
@@ -21,7 +22,7 @@ import { TodoList } from './components/TodoList'
 import { WinForm } from './components/WinForm'
 import { toDateInput } from './dates'
 import { addLoggedWin, addTask, applyEntryEdit, applyWinEdit, deleteEntry, type TimeEntryPatch, type WinValues } from './edits'
-import { formatMinutes, isActive, linkByArea, periodStartFor, progressFor } from './goals'
+import { formatMinutes, isActive, linkByArea } from './goals'
 import { archiveGoal, deleteWin, removeArea, removeGoal, restoreGoal, withStatus } from './manage'
 import { applyQuickWin, applyTemplateToWins, contributionsFor, revertTemplateApplication, undoQuickWin } from './quickWins'
 import { activityFor, dayRange } from './reports'
@@ -30,7 +31,7 @@ import { deserialize } from './serialize'
 import { discardTimer, startTimer, stopTimer, type StopOptions } from './timer'
 import type { AppData, AreaDef, GoalDef, QuickWin, Win, WinStatus } from './types'
 
-const emptyData: AppData = { timer: null, areas: [], quickWins: [], goals: [], wins: [], timeEntries: [] }
+const emptyData: AppData = { timer: null, areas: DEFAULT_AREAS, quickWins: [], goals: [], wins: [], timeEntries: [] }
 
 type ToastState = { id: string; message: string; undo?: () => void }
 
@@ -453,11 +454,7 @@ function App() {
         {/* The header: goal rings, and under them a bead for every win finished today. */}
         <section className="card header-card">
           {leafGoals.length > 0 ? (
-            <div className="rings">
-              {leafGoals.map((goal) => (
-                <GoalRing key={goal.id} goal={goal} progress={progressFor(goal, data, periodStartFor(goal.period, now))} />
-              ))}
-            </div>
+            <AreaRings data={data} now={now} />
           ) : (
             <div>
               <p className="muted">Goals show up here as rings you fill as you go.</p>

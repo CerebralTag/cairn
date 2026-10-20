@@ -18,7 +18,7 @@ function AreaForm({ initial, areas, onSave, onCancel }: { initial?: AreaDef; are
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (name.trim() === '') return
-    onSave({ id: initial?.id ?? crypto.randomUUID(), name: name.trim(), colour })
+    onSave({ ...initial, id: initial?.id ?? crypto.randomUUID(), name: name.trim(), colour })
   }
 
   return (
@@ -67,6 +67,7 @@ export function AreasPanel({ areas, onSave, onRemove }: Props) {
   return (
     <>
       <section className="card">
+        <p className="muted">Each area with goals gets a ring on Today. Switch one off to hide it and its goals there.</p>
         <ul className="list">
           {areas.map((area) =>
             editingId === area.id ? (
@@ -79,6 +80,14 @@ export function AreasPanel({ areas, onSave, onRemove }: Props) {
               <li key={area.id}>
                 <span className="dot" style={{ background: paletteColour(area.colour) }} />
                 <div className="grow">{area.name}</div>
+                <label className="check-row" title="Give this area a ring on Today">
+                  <input
+                    type="checkbox"
+                    checked={area.onToday !== false}
+                    onChange={(e) => onSave({ ...area, onToday: e.target.checked ? undefined : false })}
+                  />
+                  On Today
+                </label>
                 <button className="link" onClick={() => setEditingId(area.id)}>
                   Edit
                 </button>

@@ -141,6 +141,7 @@ function validArea(a: unknown): boolean {
     isRecord(a) &&
     isString(a.id) &&
     isString(a.name) &&
+    optional(a.onToday, (v) => typeof v === 'boolean') &&
     isNumber(a.colour) &&
     Number.isInteger(a.colour) &&
     a.colour >= 1 &&

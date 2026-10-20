@@ -268,3 +268,13 @@ describe('task origin and goal rules survive saving and are validated', () => {
     expect(() => deserialize(JSON.stringify(b))).toThrow(/damaged/)
   })
 })
+
+describe('areas on Today', () => {
+  it('round-trips an area switched off, and rejects a non-boolean switch', () => {
+    const off = { ...sample, areas: [{ id: 'a', name: 'A', colour: 1, onToday: false }] }
+    expect(deserialize(serialize(off)).areas).toEqual(off.areas)
+    const raw = JSON.parse(serialize(off))
+    raw.areas[0].onToday = 'no'
+    expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
+  })
+})

@@ -12,7 +12,8 @@ export type Area = string
 
 // Label + colour used for grouping. `colour` is a palette slot (1-7) rather than
 // a hex value, so the whole palette can be swapped or themed from CSS alone.
-export type AreaDef = { id: Area; name: string; colour: number }
+// `onToday: false` takes the area off Today's rings; absent means it gets one.
+export type AreaDef = { id: Area; name: string; colour: number; onToday?: boolean }
 
 export type WinStatus = 'todo' | 'doing' | 'done' | 'dropped'
 

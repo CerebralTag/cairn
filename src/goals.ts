@@ -69,6 +69,21 @@ export function taggedTemplates(goal: GoalDef, data: AppData): QuickWin[] {
   return data.quickWins.filter((q) => q.goalIds.includes(goal.id))
 }
 
+// The tagged repeatable tasks of an "each" goal, and whether each has a finished win in the
+// period starting at `periodStart`.
+export type EachStep = { id: string; title: string; done: boolean }
+
+export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): EachStep[] {
+  const start = periodStart.getTime()
+  const end = periodEnd(goal.period, periodStart).getTime()
+  const doneIds = new Set(
+    data.wins
+      .filter((w) => w.status === 'done' && w.completedAt && w.completedAt.getTime() >= start && w.completedAt.getTime() < end)
+      .map((w) => w.quickWinId),
+  )
+  return taggedTemplates(goal, data).map((q) => ({ id: q.id, title: q.title, done: doneIds.has(q.id) }))
+}
+
 // The target in effect for the period starting at `periodStart`: the latest
 // target whose `from` is on or before it. undefined if the goal didn't exist yet.
 export function targetFor(goal: GoalDef, periodStart: Date): number | undefined {
@@ -183,16 +198,13 @@ export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): Go
     // Met when every repeatable task tagged to the goal has a finished win in the period. The
     // target is how many are tagged now, so adding a chore raises it (earlier periods are
     // judged against today's list; the stored target only marks that the goal existed).
-    const tagged = taggedTemplates(goal, data)
-    const doneIds = new Set(
-      data.wins.filter((w) => w.status === 'done' && w.completedAt && inPeriod(w.completedAt)).map((w) => w.quickWinId),
-    )
-    const eachDone = tagged.filter((q) => doneIds.has(q.id)).length
+    const steps = eachSteps(goal, data, periodStart)
+    const eachDone = steps.filter((s) => s.done).length
     return {
       done: eachDone,
-      target: tagged.length,
-      fraction: tagged.length > 0 ? eachDone / tagged.length : 0,
-      met: tagged.length > 0 && eachDone >= tagged.length,
+      target: steps.length,
+      fraction: steps.length > 0 ? eachDone / steps.length : 0,
+      met: steps.length > 0 && eachDone >= steps.length,
     }
   }
   if (goal.kind === 'time') {
