@@ -5,7 +5,6 @@ import { makeSuggest } from './suggest'
 import { SuggestContext } from './suggestContext'
 import { DEFAULT_AREAS } from './areas'
 import { AreaRings } from './components/AreaRings'
-import { areaCards } from './todayAreas'
 import { setAreaGoals } from './areaGoals'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
@@ -479,9 +478,6 @@ function App() {
                 Add your first goal
               </button>
             </div>
-          )}
-          {leafGoals.length > 0 && areaCards(data, now).length === 0 && (
-            <p className="muted">Your goals are in areas that are switched off. Turn them on under Manage, Areas.</p>
           )}
           <TodayBeads items={todayItems} onEdit={setEditingKey} />
         </section>

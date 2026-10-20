@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OTHER_KEY, areaCards, goalDisplay } from './todayAreas'
+import { OTHER_KEY, areaCards, goalColourFor, goalDisplay, todayGoals } from './todayAreas'
 import { eachSteps } from './goals'
 import { SINCE, data, doneWin, guitar, session, squats, todo, workouts } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
@@ -114,5 +114,35 @@ describe('eachSteps', () => {
       { id: 'dishes', title: 'dishes', done: true },
       { id: 'bins', title: 'bins', done: false },
     ])
+  })
+})
+
+describe('todayGoals', () => {
+  it('lists every active goal, even with no area or in an area that has no ring', () => {
+    const noArea: GoalDef = { ...squats, areas: [] }
+    const offArea: GoalDef = { ...workouts, areas: ['work'] } // work is switched off
+    const d = { ...withAreas(data([noArea, offArea, guitar])), otherOnToday: false }
+    expect(todayGoals(d, WED).map((i) => i.goal.id).sort()).toEqual(['guitar', 'squats', 'workouts'])
+  })
+
+  it('keeps goals of one area together, in area order, with no-area goals last', () => {
+    const health: GoalDef = { ...workouts, id: 'h', areas: ['health'] }
+    const music: GoalDef = { ...guitar, id: 'm', areas: ['music'] }
+    const none: GoalDef = { ...squats, id: 'n', areas: [] }
+    expect(todayGoals(withAreas(data([none, health, music])), WED).map((i) => i.goal.id)).toEqual(['m', 'h', 'n'])
+  })
+
+  it('leaves out archived and overarching goals', () => {
+    const archived: GoalDef = { ...guitar, id: 'x', archivedAt: SINCE }
+    const overall: GoalDef = { id: 'o', title: 'O', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['guitar'] }
+    expect(todayGoals(withAreas(data([archived, overall])), WED)).toEqual([])
+  })
+})
+
+describe('goalColourFor', () => {
+  it('uses the first area that exists, else neutral grey', () => {
+    const areas = withAreas(data([])).areas
+    expect(goalColourFor(areas, { ...guitar, areas: ['gone', 'health'] })).toBe('var(--palette-2)')
+    expect(goalColourFor(areas, { ...guitar, areas: [] })).toBe('var(--color-bead-neutral)')
   })
 })

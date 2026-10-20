@@ -79,3 +79,28 @@ export function areaCards(data: AppData, now: Date): AreaCard[] {
   if (loose.length > 0 && data.otherOnToday !== false) cards.push(card(OTHER_KEY, data.areas.length === 0 ? 'Goals' : 'Other', NEUTRAL_COLOUR, loose))
   return cards
 }
+
+// A goal's colour on Today: that of the first of its areas that exists, else neutral grey.
+// (Colour is the only sign of the area on a goal row; the rings carry the names.)
+export function goalColourFor(areas: AppData['areas'], goal: GoalDef): string {
+  const area = goal.areas.map((id) => areas.find((a) => a.id === id)).find((a) => a !== undefined)
+  return area ? colourFor(areas, area.id) : NEUTRAL_COLOUR
+}
+
+// Every active goal for the period, whether or not its area has a ring (or has any area at all).
+// Ordered by area, in the order areas are listed, with goals that have none last, so goals that
+// share a colour sit together. Overarching goals have their own cards and are not included.
+export function todayGoals(data: AppData, now: Date): AreaGoal[] {
+  const rank = (g: GoalDef) => {
+    const i = Math.min(...g.areas.map((id) => data.areas.findIndex((a) => a.id === id)).filter((n) => n >= 0))
+    return Number.isFinite(i) ? i : data.areas.length
+  }
+  return data.goals
+    .filter((g) => !g.childIds && isActive(g))
+    .map((g, index) => ({ g, index, rank: rank(g) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ g }) => {
+      const start = periodStartFor(g.period, now)
+      return { goal: g, progress: progressFor(g, data, start), steps: goalSource(g) === 'each' ? eachSteps(g, data, start) : undefined }
+    })
+}

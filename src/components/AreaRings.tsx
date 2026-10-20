@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { PERIOD_WORDS, progressLabel } from '../goals'
-import { areaCards, goalDisplay, type AreaCard, type AreaGoal } from '../todayAreas'
+import { areaCards, goalColourFor, goalDisplay, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
 import type { AppData } from '../types'
-import { OTHER_KEY } from '../todayAreas'
 
 const RADIUS = 27
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
@@ -107,45 +106,43 @@ function GoalRow({ item, colour }: { item: AreaGoal; colour: string }) {
   )
 }
 
-// Today's goals: a ring per area (the ones switched on in Manage), and under them the
-// goals of the area you tapped. Tapping the open ring again closes it.
+// Today's goals: every goal for the week in one list, coloured by its area, with a ring per
+// area (the ones switched on in Manage) above it as a summary. Tap a ring to narrow the list to
+// that area (its to-dos join in); tap it again to see everything.
 export function AreaRings({ data, now }: { data: AppData; now: Date }) {
   const cards = areaCards(data, now)
-  const [pickedKey, setPickedKey] = useState<string | null | undefined>(undefined) // undefined: first area
-  if (cards.length === 0) return null
-
-  const open = pickedKey === null ? undefined : (cards.find((c) => c.key === pickedKey) ?? cards[0])
+  const [pickedKey, setPickedKey] = useState<string | null>(null)
+  const picked = cards.find((c) => c.key === pickedKey) // a ring that has since gone means "all"
+  const everything = todayGoals(data, now)
 
   return (
     <div className="area-rings">
-      <div className="area-ring-row">
-        {cards.map((card) => (
-          <AreaRing
-            key={card.key}
-            card={card}
-            selected={open?.key === card.key}
-            onSelect={() => setPickedKey(open?.key === card.key ? null : card.key)}
-          />
-        ))}
-      </div>
-      {open && (
-        <div className="area-goals" aria-label={`${open.name} goals`}>
-          {open.goals.map((item) => (
-            <GoalRow key={item.goal.id} item={item} colour={open.colour} />
-          ))}
-          {open.key === OTHER_KEY && data.areas.length > 0 && (
-            <p className="muted">These goals have no area yet. Give them one under Manage, Areas.</p>
-          )}
-          {open.tasks.map((t) => (
-            <div key={t.id} className="goal-row">
-              <div className="goal-row-head">
-                <span className="goal-row-title">{t.title}</span>
-                {t.done && <Bubble on colour={open.colour} />}
-              </div>
-            </div>
+      {cards.length > 0 && (
+        <div className="area-ring-row">
+          {cards.map((card) => (
+            <AreaRing
+              key={card.key}
+              card={card}
+              selected={picked?.key === card.key}
+              onSelect={() => setPickedKey(picked?.key === card.key ? null : card.key)}
+            />
           ))}
         </div>
       )}
+      <div className="area-goals" aria-label={picked ? `${picked.name} goals` : 'Goals'}>
+        {picked
+          ? picked.goals.map((item) => <GoalRow key={item.goal.id} item={item} colour={picked.colour} />)
+          : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} />)}
+        {picked?.tasks.map((t) => (
+          <div key={t.id} className="goal-row">
+            <div className="goal-row-head">
+              <span className="goal-row-title">{t.title}</span>
+              {t.done && <Bubble on colour={picked.colour} />}
+            </div>
+          </div>
+        ))}
+        {picked && picked.total === 0 && <p className="muted">Nothing in {picked.name} yet.</p>}
+      </div>
     </div>
   )
 }
