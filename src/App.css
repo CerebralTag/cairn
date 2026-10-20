@@ -33,12 +33,18 @@
 }
 
 .area-ring-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)); /* equal rings; a fifth area starts a second row */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* a short or wrapped row stays centred */
   gap: 8px 4px;
 }
 
+/* Rings share the row equally by how many there are (--cols, at most 4), up to a cap, so three
+   or two are bigger dials than four. */
 .area-ring {
+  flex: 0 0 calc((100% - (var(--cols, 4) - 1) * 4px) / var(--cols, 4));
+  max-width: 112px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -48,6 +54,12 @@
   border-radius: 12px;
   background: transparent;
   color: var(--color-text);
+}
+
+.area-ring-dial {
+  width: 100%;
+  max-width: 100px;
+  height: auto;
 }
 
 .area-ring.on {

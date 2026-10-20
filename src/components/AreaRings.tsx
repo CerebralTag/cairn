@@ -3,6 +3,7 @@ import { PERIOD_WORDS, progressLabel } from '../goals'
 import { areaCards, goalColourFor, goalDisplay, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
 import type { AppData } from '../types'
 
+const MAX_PER_ROW = 4 // more areas than this wrap onto a second row
 const RADIUS = 27
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
@@ -16,7 +17,7 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
       aria-label={`${card.name}, ${card.met} of ${card.total} done`}
       onClick={onSelect}
     >
-      <svg viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">
+      <svg viewBox="0 0 72 72" className="area-ring-dial" aria-hidden="true">
         <circle cx="36" cy="36" r={RADIUS} fill="none" stroke="var(--color-ring-track)" strokeWidth="7" />
         {filled > 0 && (
           // A zero-length arc with round caps would still draw a dot, so skip it.
@@ -118,7 +119,7 @@ export function AreaRings({ data, now }: { data: AppData; now: Date }) {
   return (
     <div className="area-rings">
       {cards.length > 0 && (
-        <div className="area-ring-row">
+        <div className="area-ring-row" style={{ ['--cols' as string]: Math.min(cards.length, MAX_PER_ROW) }}>
           {cards.map((card) => (
             <AreaRing
               key={card.key}
