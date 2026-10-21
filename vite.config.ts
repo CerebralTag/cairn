@@ -49,7 +49,9 @@ function precachePlugin(): Plugin {
       for (const file of files) hash.update(file).update(readFileSync(path.join(outDir, file)))
       const build = hash.digest('hex').slice(0, 10)
 
-      writeFileSync(path.join(outDir, 'version.json'), JSON.stringify(BUILD_INFO))
+      // `commit` is only for older builds still in people's browsers (they read that name), so
+      // their "Check for updates" keeps working; the app itself reads `version`.
+      writeFileSync(path.join(outDir, 'version.json'), JSON.stringify({ ...BUILD_INFO, commit: git('rev-parse --short HEAD') ?? 'unknown' }))
       const swPath = path.join(outDir, 'sw.js')
       const sw = readFileSync(swPath, 'utf8')
         .replace("const BUILD = 'dev'", `const BUILD = '${build}'`)
