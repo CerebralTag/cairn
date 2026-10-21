@@ -53,7 +53,7 @@ Bottom nav is three items: **Today, History, Manage** (phone width is limited; d
 - Typed numbers go through `positiveNumber` (src/limits.ts): finite, positive, at most 100,000.
 - Backups exclude the running timer; importing keeps a running timer.
 - Two tabs sync through the `storage` event; the save effect skips the write that follows adopting another tab's data.
-- The service worker precache list and cache name are generated at build time (vite.config.ts); matches ignore `Vary`. Run `npm run test:tz` when touching date logic (suite passes in several time zones).
+- The service worker precache list and cache name are generated at build time (vite.config.ts); matches ignore `Vary`. GitHub Pages sends `cache-control: max-age=600` on everything, so the service worker must not trust the browser's HTTP cache: navigations are fetched with `cache: 'no-cache'` (revalidate), the precache is fetched with `cache: 'reload'`, and "Reload fresh" refetches `./` with `cache: 'reload'` before reloading. Without this a reopened app showed the previous deploy for up to 10 minutes (reproduced with a local server using the same header). Run `npm run test:tz` when touching date logic (suite passes in several time zones).
 - There are no existing exports, and legacy saved data does not matter: the old-format migration code is kept but not maintained or tested further.
 
 ## Stack

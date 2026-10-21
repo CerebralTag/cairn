@@ -23,7 +23,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
+      // `reload` skips the browser's own HTTP cache (GitHub Pages lets it keep files for 10 minutes), so
+      // what gets stored is what the server has now, never a stale copy from just before a deploy.
+      .then((cache) => cache.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting()),
   )
 })
@@ -42,12 +44,12 @@ self.addEventListener('activate', (event) => {
 // make a file cached during install look like a different resource and fail offline.
 const MATCH = { ignoreVary: true }
 
-function fetchWithTimeout(request) {
+function fetchWithTimeout(request, init) {
   let timer
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error('timeout')), NETWORK_TIMEOUT_MS)
   })
-  return Promise.race([fetch(request), timeout]).finally(() => clearTimeout(timer))
+  return Promise.race([fetch(request, init), timeout]).finally(() => clearTimeout(timer))
 }
 
 self.addEventListener('fetch', (event) => {
@@ -58,7 +60,10 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetchWithTimeout(request)
+      // `no-cache` makes the browser ask the server whether the page changed (a quick 304 when it
+      // hasn't) instead of reusing a copy it was told it may keep for 10 minutes, which is what made
+      // a reopened app show the previous version after a deploy.
+      fetchWithTimeout(request.url, { cache: 'no-cache' })
         .then((response) => {
           // Only a good page replaces the cached one: an error page must never become "the app".
           if (response.ok) {

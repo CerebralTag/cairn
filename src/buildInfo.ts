@@ -64,6 +64,12 @@ export async function refreshApp(): Promise<string | null> {
   } catch {
     // Reloading below still helps.
   }
+  try {
+    // Also refresh the browser's own copy of the page, which it may otherwise reuse for minutes.
+    await fetch('./', { cache: 'reload' })
+  } catch {
+    // The reload below still tries the network.
+  }
   window.location.reload()
   return null
 }
