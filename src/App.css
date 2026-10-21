@@ -138,6 +138,21 @@
   font-size: 0.75rem;
 }
 
+.step-button {
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.step-button:active {
+  background: var(--color-ring-track);
+}
+
 .step-name {
   text-align: center;
   overflow-wrap: anywhere;

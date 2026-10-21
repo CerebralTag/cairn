@@ -470,7 +470,7 @@ function App() {
 
         {/* The header: goal rings, and under them a bead for every win finished today. */}
         <section className="card header-card">
-          <AreaRings data={data} now={now} />
+          <AreaRings data={data} now={now} onLogTask={(id) => tapQuickWin(id)} />
           {leafGoals.length === 0 && (
             <div>
               <p className="muted">Goals fill the rings as you go.</p>

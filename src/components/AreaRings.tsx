@@ -51,7 +51,7 @@ function Bubble({ on, colour, big }: { on: boolean; colour: string; big?: boolea
 }
 
 // One goal, drawn by what it is: a bar, a few bubbles, or a labelled bubble per task.
-function GoalRow({ item, colour }: { item: AreaGoal; colour: string }) {
+function GoalRow({ item, colour, onLogTask }: { item: AreaGoal; colour: string; onLogTask?: (quickWinId: string) => void }) {
   const { goal, progress, steps } = item
   const display = goalDisplay(goal, progress)
   if (display === 'task') {
@@ -91,15 +91,27 @@ function GoalRow({ item, colour }: { item: AreaGoal; colour: string }) {
       )}
       {display === 'steps' && (
         <div className="steps">
-          {(steps ?? []).map((s) => (
-            <span key={s.id} className="step">
-              <Bubble on={s.done} colour={colour} big />
-              <span className="step-name">
-                <span className="sr-only">{s.done ? 'Done: ' : 'Not yet: '}</span>
-                {s.title}
+          {(steps ?? []).map((s) => {
+            const inner = (
+              <>
+                <Bubble on={s.done} colour={colour} big />
+                <span className="step-name">
+                  <span className="sr-only">{s.done ? 'Done: ' : 'Not yet: '}</span>
+                  {s.title}
+                </span>
+              </>
+            )
+            // Tapping a task that isn't done yet logs it (or asks how long, if it is set to).
+            return s.done || !onLogTask ? (
+              <span key={s.id} className="step">
+                {inner}
               </span>
-            </span>
-          ))}
+            ) : (
+              <button key={s.id} className="step step-button" aria-label={`Log ${s.title}`} onClick={() => onLogTask(s.id)}>
+                {inner}
+              </button>
+            )
+          })}
           {(steps ?? []).length === 0 && <span className="muted">Tag repeatable tasks to this goal in Manage.</span>}
         </div>
       )}
@@ -110,7 +122,7 @@ function GoalRow({ item, colour }: { item: AreaGoal; colour: string }) {
 // Today's goals: every goal for the week in one list, coloured by its area, with a ring per
 // area (the ones switched on in Manage) above it as a summary. Tap a ring to narrow the list to
 // that area (its to-dos join in); tap it again to see everything.
-export function AreaRings({ data, now }: { data: AppData; now: Date }) {
+export function AreaRings({ data, now, onLogTask }: { data: AppData; now: Date; onLogTask?: (quickWinId: string) => void }) {
   const cards = areaCards(data, now)
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const picked = cards.find((c) => c.key === pickedKey) // a ring that has since gone means "all"
@@ -132,8 +144,8 @@ export function AreaRings({ data, now }: { data: AppData; now: Date }) {
       )}
       <div className="area-goals" aria-label={picked ? `${picked.name} goals` : 'Goals'}>
         {picked
-          ? picked.goals.map((item) => <GoalRow key={item.goal.id} item={item} colour={picked.colour} />)
-          : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} />)}
+          ? picked.goals.map((item) => <GoalRow key={item.goal.id} item={item} colour={picked.colour} onLogTask={onLogTask} />)
+          : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} onLogTask={onLogTask} />)}
         {picked?.tasks.map((t) => (
           <div key={t.id} className="goal-row">
             <div className="goal-row-head">
