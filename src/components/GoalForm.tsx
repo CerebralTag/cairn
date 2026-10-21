@@ -29,7 +29,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
   const [period, setPeriod] = useState<GoalPeriod>(initial?.period ?? 'week')
   const [source, setSource] = useState<GoalSource>(initial?.source ?? 'linked')
   const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
-  const [backfill, setBackfill] = useState(true)
+  const [backfill, setBackfill] = useState(false)
   const [amount, setAmount] = useState(() => {
     if (!initial || initial.childIds) return ''
     const target = currentTarget(initial, now)
@@ -177,7 +177,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
           {!editing && areas.length > 0 && (type === 'count' ? source === 'linked' : type === 'time' ? source === 'linked' : true) && (
             <label className="check-row">
               <input type="checkbox" checked={backfill} onChange={(e) => setBackfill(e.target.checked)} />
-              Link my existing entries in these areas
+              Also count my past entries in these areas toward this goal
             </label>
           )}
         </>
