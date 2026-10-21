@@ -9,6 +9,8 @@ import {
   isLinkable,
   isTemplateLinkable,
   syncEachGoals,
+  eachSteps,
+  timesFor,
   taggedTemplates,
   linkByArea,
   periodEnd,
@@ -485,5 +487,34 @@ describe('a goal met by doing each tagged repeatable task once', () => {
     const overall: GoalDef = { id: 'all', title: 'All', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['chores'] }
     const d = { ...base, goals: [chores, overall], wins: [tap(MON, 'dishes'), tap(MON, 'laundry'), tap(MON, 'bins')] }
     expect(progressFor(overall, d, MON).met).toBe(true)
+  })
+})
+
+describe('each goals where a task is needed several times', () => {
+  const litter: GoalDef = {
+    id: 'chores', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each',
+    stepTimes: { litter: 3 }, targets: [{ from: SINCE, amount: 4 }], // litter x3 + dishes x1
+  }
+  const q = (id: string) => ({ id, title: id, areas: [], goalIds: ['chores'], uses: 0 })
+  const base = { ...data([litter]), quickWins: [q('litter'), q('dishes')] }
+  const tap = (id: string, day = 12) => doneWin(new Date(2026, 9, day, 9), { origin: 'quick', quickWinId: id, goalIds: ['chores'] })
+
+  it('is not done after one of three, and shows how far along it is', () => {
+    const d = { ...base, wins: [tap('litter')] }
+    expect(eachSteps(litter, d, MON).find((s) => s.id === 'litter')).toMatchObject({ count: 1, times: 3, done: false })
+    expect(progressFor(litter, d, MON)).toMatchObject({ done: 1, target: 4, met: false })
+  })
+
+  it('is done at three, and extra taps do not push the goal past what is needed', () => {
+    const d = { ...base, wins: [tap('litter', 12), tap('litter', 13), tap('litter', 14), tap('litter', 15), tap('dishes')] }
+    expect(eachSteps(litter, d, MON).find((s) => s.id === 'litter')?.done).toBe(true)
+    expect(progressFor(litter, d, MON)).toMatchObject({ done: 4, target: 4, met: true })
+  })
+
+  it('sets the target to the total times needed, and defaults a task to once', () => {
+    const fresh = { ...base, goals: [{ ...litter, targets: [] }] }
+    expect(syncEachGoals(fresh, MON).goals[0].targets.at(-1)?.amount).toBe(4)
+    expect(timesFor(litter, 'dishes')).toBe(1)
+    expect(timesFor(litter, 'litter')).toBe(3)
   })
 })

@@ -120,6 +120,10 @@ function validEntry(e: unknown): boolean {
   )
 }
 
+function validStepTimes(v: unknown): boolean {
+  return isRecord(v) && Object.values(v).every((n) => isNumber(n) && Number.isInteger(n) && n >= 1 && n <= 1000)
+}
+
 // Only some rules make sense for each kind of goal (the app never makes the others).
 const SOURCES_FOR_KIND: Record<string, string[]> = {
   time: ['linked', 'any'],
@@ -145,7 +149,8 @@ function validGoal(g: unknown): boolean {
     optional(g.childIds, isStringArray) &&
     optional(g.archivedAt, validDate) &&
     optional(g.source, (s) => isString(s) && SOURCES.includes(s)) &&
-    sourceFitsKind(g.kind, g.source)
+    sourceFitsKind(g.kind, g.source) &&
+    optional(g.stepTimes, validStepTimes)
   )
 }
 

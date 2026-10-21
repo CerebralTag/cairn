@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { positiveNumber } from '../limits'
 import { PERIOD_WORDS, currentTarget, formatMinutes, isActive, withTarget } from '../goals'
-import type { Area, GoalDef, GoalPeriod, GoalSource } from '../types'
+import { taggedTemplates, timesFor } from '../goals'
+import type { AppData, Area, GoalDef, GoalPeriod, GoalSource, QuickWin } from '../types'
 import { AreaChips } from './AreaChips'
 
 type GoalType = 'time' | 'count' | 'amount' | 'overarching'
@@ -9,6 +10,7 @@ type GoalType = 'time' | 'count' | 'amount' | 'overarching'
 type Props = {
   initial?: GoalDef // present = editing
   allGoals: GoalDef[]
+  quickWins?: QuickWin[] // for "each" goals: the tasks tagged to it, each with how often it is needed
   onSave: (goal: GoalDef, backfill: boolean) => void
   onCancel: () => void
 }
@@ -21,7 +23,7 @@ function typeOf(goal: GoalDef): GoalType {
 // count) and the period (day, week, month) are fixed once created, because past
 // targets are stored in that unit and length.
 // Editing areas is safe: progress comes from explicit links, not from areas.
-export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
+export function GoalForm({ initial, allGoals, quickWins = [], onSave, onCancel }: Props) {
   const now = new Date()
   const editing = initial !== undefined
   const [title, setTitle] = useState(initial?.title ?? '')
@@ -36,6 +38,11 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
     return String(initial.kind === 'time' ? target / 60 : target)
   })
   const [childIds, setChildIds] = useState<string[]>(initial?.childIds ?? [])
+  // "Each" goals: how many times each tagged task is needed per period, typed as text while editing.
+  const tagged = initial ? taggedTemplates(initial, { quickWins } as AppData) : []
+  const [times, setTimes] = useState<Record<string, string>>(() =>
+    Object.fromEntries(tagged.map((q) => [q.id, String(initial ? timesFor(initial, q.id) : 1)])),
+  )
 
   // An overarching goal can only include goals that repeat on the same schedule as it.
   const candidates = allGoals.filter((g) => !g.childIds && g.id !== initial?.id && isActive(g) && g.period === period)
@@ -75,11 +82,16 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
     const base: GoalDef = initial ?? { id: crypto.randomUUID(), title: '', areas: [], kind: type, period, targets: [] }
     // 'linked' is the default and is stored as no value at all. Amount goals always count linked wins.
     const rule: GoalSource = type === 'count' || type === 'time' ? source : 'linked'
+    // Only tasks needed more than once are stored; the rest default to once.
+    const stepTimes = Object.fromEntries(
+      tagged.map((q) => [q.id, Math.round(positiveNumber(times[q.id] ?? '1') ?? 1)] as const).filter(([, n]) => n > 1),
+    )
     const updated: GoalDef = {
       ...base,
       title: title.trim(),
       areas,
       source: rule === 'linked' ? undefined : rule,
+      stepTimes: eachRule && Object.keys(stepTimes).length > 0 ? stepTimes : undefined,
     }
     // Only changed when the target differs, so unrelated edits don't add history rows.
     const unchanged = initial && currentTarget(initial, now) === target
@@ -151,6 +163,24 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
 
       <AreaChips value={areas} onToggle={toggleArea} label="Areas (label and colour)" />
 
+      {eachRule && editing && tagged.length > 0 && (
+        <fieldset className="children">
+          <legend className="muted">How often each is needed {PERIOD_WORDS[period].per}</legend>
+          {tagged.map((q) => (
+            <label key={q.id} className="times-row">
+              <span className="grow">{q.title}</span>
+              <input
+                type="number"
+                min="1"
+                max="1000"
+                aria-label={`Times for ${q.title}`}
+                value={times[q.id] ?? '1'}
+                onChange={(e) => setTimes({ ...times, [q.id]: e.target.value })}
+              />
+            </label>
+          ))}
+        </fieldset>
+      )}
       {eachRule && (
         <p className="muted">
           Met when every repeatable task tagged to it has been done once {PERIOD_WORDS[period].per.replace('per ', 'each ')}. Tag them in Manage under Repeatable tasks.

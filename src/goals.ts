@@ -69,43 +69,57 @@ export function taggedTemplates(goal: GoalDef, data: AppData): QuickWin[] {
   return data.quickWins.filter((q) => q.goalIds.includes(goal.id))
 }
 
-// The tagged repeatable tasks of an "each" goal, and whether each has a finished win in the
-// period starting at `periodStart`.
-export type EachStep = { id: string; title: string; done: boolean }
+// How many times a tagged task must be done per period for an "each" goal (1 unless set).
+export function timesFor(goal: GoalDef, quickWinId: string): number {
+  return Math.max(1, goal.stepTimes?.[quickWinId] ?? 1)
+}
+
+// The tagged repeatable tasks of an "each" goal: how often each was done in the period starting
+// at `periodStart`, how often it must be, and whether that is enough.
+export type EachStep = { id: string; title: string; count: number; times: number; done: boolean }
 
 export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): EachStep[] {
   const start = periodStart.getTime()
   const end = periodEnd(goal.period, periodStart).getTime()
-  const doneIds = eachDoneIds(goal, data, start, end)
-  return taggedTemplates(goal, data).map((q) => ({ id: q.id, title: q.title, done: doneIds.has(q.id) }))
+  const counts = eachCounts(goal, data, start, end)
+  return taggedTemplates(goal, data).map((q) => {
+    const count = counts.get(q.id) ?? 0
+    const times = timesFor(goal, q.id)
+    return { id: q.id, title: q.title, count, times, done: count >= times }
+  })
 }
 
-// The repeatable tasks done in [start, end) that counted toward an "each" goal: finished wins
+// How often each repeatable task was done in [start, end) toward an "each" goal: finished wins
 // carrying the goal's id (copied from the task when it was tapped, so this stays true even if
 // the task is later renamed, untagged or removed).
-function eachDoneIds(goal: GoalDef, data: AppData, start: number, end: number): Set<string> {
-  const ids = new Set<string>()
+function eachCounts(goal: GoalDef, data: AppData, start: number, end: number): Map<string, number> {
+  const counts = new Map<string, number>()
   for (const w of data.wins) {
     if (w.status !== 'done' || !w.completedAt || !w.quickWinId || !w.goalIds.includes(goal.id)) continue
-    if (w.completedAt.getTime() >= start && w.completedAt.getTime() < end) ids.add(w.quickWinId)
+    if (w.completedAt.getTime() >= start && w.completedAt.getTime() < end) counts.set(w.quickWinId, (counts.get(w.quickWinId) ?? 0) + 1)
   }
-  return ids
+  return counts
 }
 
-// "Each" goals take their target from how many tasks are tagged. Whenever that changes, record
-// the new number from the current period on, so earlier periods keep the target they had.
+// What an "each" goal's target should be right now: the times its tagged tasks are each needed.
+function eachTarget(goal: GoalDef, data: AppData): number {
+  return taggedTemplates(goal, data).reduce((sum, q) => sum + timesFor(goal, q.id), 0)
+}
+
+// "Each" goals take their target from their tagged tasks (and how often each is needed). Whenever
+// that changes, record the new number from the current period on, so earlier periods keep the
+// target they had.
 export function syncEachGoals(data: AppData, now: Date): AppData {
   let changed = false
   const goals = data.goals.map((g) => {
     if (g.childIds || !isActive(g) || goalSource(g) !== 'each') return g
-    const count = taggedTemplates(g, data).length
+    const count = eachTarget(g, data)
     if (g.targets.length > 0 && currentTarget(g, now) === count) return g
     changed = true
     return withTarget(g, count, now)
   })
   return changed ? { ...data, goals } : data
 }
-
 
 // The target in effect for the period starting at `periodStart`: the latest
 // target whose `from` is on or before it. undefined if the goal didn't exist yet.
@@ -222,11 +236,14 @@ export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): Go
   const source = goalSource(goal)
   let done: number
   if (source === 'each') {
-    // Met when as many different repeatable tasks were done in the period as the target says.
-    // The target is the number tagged at the time (kept in the target history by
-    // syncEachGoals), and what was done comes from the wins themselves, so adding or
-    // removing a task later never rewrites a past period.
-    const eachDone = eachDoneIds(goal, data, start, end).size
+    // Each tagged task counts up to the number of times it is needed; a task since removed or
+    // untagged counts once, so a past hit is never erased. The target is the total needed at the
+    // time (kept in the target history by syncEachGoals), and what was done comes from the wins
+    // themselves, so changing the tasks later never rewrites a past period.
+    const counts = eachCounts(goal, data, start, end)
+    const tagged = new Set(taggedTemplates(goal, data).map((q) => q.id))
+    let eachDone = 0
+    for (const [id, count] of counts) eachDone += Math.min(count, tagged.has(id) ? timesFor(goal, id) : 1)
     return {
       done: eachDone,
       target,

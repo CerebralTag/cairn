@@ -42,10 +42,14 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
   )
 }
 
-function Bubble({ on, colour, big }: { on: boolean; colour: string; big?: boolean }) {
+function Bubble({ on, colour, big, part }: { on: boolean; colour: string; big?: boolean; part?: number }) {
+  // `part`: a task needed several times, done some of them but not yet enough: show how many.
   return (
-    <span className={`bubble${on ? ' on' : ''}${big ? ' big' : ''}`} style={on ? { background: colour } : undefined}>
-      {on ? '✓' : ''}
+    <span
+      className={`bubble${on ? ' on' : ''}${big ? ' big' : ''}`}
+      style={on ? { background: colour } : part ? { borderColor: colour, color: 'var(--color-text)' } : undefined}
+    >
+      {on ? '✓' : part ? part : ''}
     </span>
   )
 }
@@ -104,10 +108,11 @@ function GoalRow({
           {(steps ?? []).map((s) => {
             const inner = (
               <>
-                <Bubble on={s.done} colour={colour} big />
+                <Bubble on={s.done} colour={colour} big part={s.done ? undefined : s.count} />
                 <span className="step-name">
                   <span className="sr-only">{s.done ? 'Done: ' : 'Not yet: '}</span>
                   {s.title}
+                  {s.times > 1 && <span className="muted step-count"> {Math.min(s.count, s.times)}/{s.times}</span>}
                 </span>
               </>
             )
@@ -115,7 +120,7 @@ function GoalRow({
             // that is done takes the latest log back, so a slip is one tap to fix.
             if (!s.done && onLogTask) {
               return (
-                <button key={s.id} className="step step-button" aria-label={`Log ${s.title}`} onClick={() => onLogTask(s.id)}>
+                <button key={s.id} className="step step-button" aria-label={s.times > 1 ? `Log ${s.title} (${s.count} of ${s.times})` : `Log ${s.title}`} onClick={() => onLogTask(s.id)}>
                   {inner}
                 </button>
               )
