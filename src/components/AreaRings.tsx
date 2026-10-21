@@ -42,15 +42,41 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
   )
 }
 
-function Bubble({ on, colour, big, part }: { on: boolean; colour: string; big?: boolean; part?: number | true }) {
-  // `part`: a task that needs more than one go, started but not yet enough: an outline in the
-  // colour, with the count inside when it is a count.
+function Bubble({ on, colour, big }: { on: boolean; colour: string; big?: boolean }) {
   return (
-    <span
-      className={`bubble${on ? ' on' : ''}${big ? ' big' : ''}`}
-      style={on ? { background: colour } : part ? { borderColor: colour, color: 'var(--color-text)' } : undefined}
-    >
-      {on ? '✓' : typeof part === 'number' ? part : ''}
+    <span className={`bubble${on ? ' on' : ''}${big ? ' big' : ''}`} style={on ? { background: colour } : undefined}>
+      {on ? '✓' : ''}
+    </span>
+  )
+}
+
+// A task's bubble in a Chores-style goal: a ring that fills as the task gets done (a third of the
+// way after one of three taps; the share of its minutes for a timed task), a number inside for a
+// task counted in taps, and a filled ✓ once it has had what it needs.
+const STEP_R = 12.5
+const STEP_C = 2 * Math.PI * STEP_R
+function StepBubble({ step, colour }: { step: { count: number; need: number; unit: 'taps' | 'minutes'; done: boolean }; colour: string }) {
+  if (step.done) return <Bubble on colour={colour} big />
+  const fraction = Math.min(step.count / step.need, 1)
+  return (
+    <span className="step-dial">
+      <svg viewBox="0 0 30 30" width="30" height="30" aria-hidden="true">
+        <circle cx="15" cy="15" r={STEP_R} fill="none" stroke="var(--color-ring-track)" strokeWidth="3" />
+        {fraction > 0 && (
+          <circle
+            cx="15"
+            cy="15"
+            r={STEP_R}
+            fill="none"
+            stroke={colour}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray={`${fraction * STEP_C} ${STEP_C}`}
+            transform="rotate(-90 15 15)"
+          />
+        )}
+      </svg>
+      {step.unit === 'taps' && step.count > 0 && <span className="step-dial-count">{step.count}</span>}
     </span>
   )
 }
@@ -116,11 +142,11 @@ function GoalRow({
           {(steps ?? []).map((s) => {
             const inner = (
               <>
-                <Bubble on={s.done} colour={colour} big part={s.done || s.count === 0 ? undefined : s.unit === 'taps' ? s.count : true} />
+                <StepBubble step={s} colour={colour} />
                 <span className="step-name">
                   <span className="sr-only">{s.done ? 'Done: ' : 'Not yet: '}</span>
                   {s.title}
-                  {progressText(s) && <span className="muted step-count"> {progressText(s)}</span>}
+                  {progressText(s) && <span className="sr-only"> {progressText(s)}</span>}
                 </span>
               </>
             )
