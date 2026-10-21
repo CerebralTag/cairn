@@ -25,7 +25,7 @@ import { toDateInput } from './dates'
 import { addLoggedWin, addTask, applyEntryEdit, applyWinEdit, deleteEntry, type TimeEntryPatch, type WinValues } from './edits'
 import { formatMinutes, isActive, linkByArea, syncEachGoals } from './goals'
 import { archiveGoal, deleteWin, removeArea, removeGoal, restoreGoal, withStatus } from './manage'
-import { applyQuickWin, applyTemplateToWins, contributionsFor, revertTemplateApplication, undoQuickWin } from './quickWins'
+import { applyQuickWin, applyTemplateToWins, asksForMinutes, contributionsFor, revertTemplateApplication, undoQuickWin } from './quickWins'
 import { activityFor, dayRange } from './reports'
 import { DATA_STORAGE_KEY, loadData, readRawData, requestPersistence, saveData } from './storage'
 import { deserialize } from './serialize'
@@ -309,7 +309,8 @@ function App() {
   // One tap logs a win; the confirmation says what it counted toward, with Undo.
   function tapQuickWin(quickWinId: string, answer?: { minutes?: number }) {
     // One that asks how long waits for the answer first (the answer comes back through here).
-    if (!answer && data.quickWins.find((q) => q.id === quickWinId)?.askMinutes) {
+    const tapped = data.quickWins.find((q) => q.id === quickWinId)
+    if (!answer && tapped && asksForMinutes(tapped, data.goals)) {
       setAskingQuickId(quickWinId)
       return
     }

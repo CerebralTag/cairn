@@ -113,7 +113,12 @@ function QuickWinForm({
         <input type="checkbox" checked={askMinutes} onChange={(e) => setAskMinutes(e.target.checked)} />
         Ask how long each time
       </label>
-      <p className="muted">The ▶ on Today starts a timer instead, and logs the win with the time when you stop.</p>
+      <p className="muted">
+        The ▶ on Today starts a timer instead, and logs the win with the time when you stop.
+        {!(measure.kind === 'time' && measure.value !== '') && !askMinutes && leafGoals.some((g) => g.kind === 'time' && goalIds.includes(g.id))
+          ? ' It counts toward a time goal, so tapping it will ask how long.'
+          : ''}
+      </p>
 
       <div className="form-buttons">
         <button type="submit" className="primary" disabled={title.trim() === ''}>

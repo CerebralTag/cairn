@@ -9,6 +9,14 @@ export function topQuickWins(quickWins: QuickWin[], count: number): QuickWin[] {
   return [...quickWins].sort((a, b) => b.uses - a.uses).slice(0, count)
 }
 
+// Whether tapping this repeatable task should ask how long first: it is set to, or it counts
+// toward a time goal but has no minutes of its own (a win with no time can't move a time goal).
+export function asksForMinutes(template: QuickWin, goals: AppData['goals']): boolean {
+  if (template.askMinutes) return true
+  if (template.minutes) return false
+  return template.goalIds.some((id) => goals.some((g) => g.id === id && g.kind === 'time' && !g.childIds && isActive(g)))
+}
+
 // Log a quick win as a finished win stamped `now`. Returns the new data and the
 // new win's id (so the tap can be undone), or null if the template is gone.
 // `minutes` replaces the template's own minutes (typed on tap, or measured by a timer that

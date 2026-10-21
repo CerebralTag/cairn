@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { linkByArea, progressFor } from './goals'
-import { applyQuickWin, applyTemplateToWins, contributionsFor, revertTemplateApplication, templateHasDetails, topQuickWins, undoQuickWin, winsNamed } from './quickWins'
+import { applyQuickWin, asksForMinutes, applyTemplateToWins, contributionsFor, revertTemplateApplication, templateHasDetails, topQuickWins, undoQuickWin, winsNamed } from './quickWins'
 import { DEFAULT_AREAS } from './areas'
 import { SINCE, amountWin, data, doneWin, guitar, session, squats, todo } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
@@ -287,5 +287,26 @@ describe('what a win counts toward when goals use rules', () => {
   it('a win with no minutes does not move the "all time" goal', () => {
     const r = applyQuickWin(d0, 'q1', WED)!
     expect(contributionsFor(r.data, r.winId, WED).join('|')).not.toContain('10 hours')
+  })
+})
+
+describe('when tapping a repeatable task asks how long', () => {
+  const timeGoal: GoalDef = { id: 'calls', title: 'Calls', areas: [], kind: 'time', period: 'week', targets: [{ from: SINCE, amount: 15 }] }
+  const countGoal: GoalDef = { ...timeGoal, id: 'cnt', kind: 'count' }
+  const call: QuickWin = { id: 'c', title: 'Call mom', areas: [], goalIds: ['calls'], uses: 0 }
+
+  it('asks when it counts toward a time goal and has no minutes of its own', () => {
+    expect(asksForMinutes(call, [timeGoal])).toBe(true)
+  })
+  it('asks when it is set to, whatever it counts toward', () => {
+    expect(asksForMinutes({ ...call, goalIds: [], askMinutes: true }, [])).toBe(true)
+  })
+  it('does not ask when it carries its own minutes, or counts toward no time goal', () => {
+    expect(asksForMinutes({ ...call, minutes: 15 }, [timeGoal])).toBe(false)
+    expect(asksForMinutes({ ...call, goalIds: ['cnt'] }, [countGoal])).toBe(false)
+    expect(asksForMinutes({ ...call, goalIds: [] }, [timeGoal])).toBe(false)
+  })
+  it('ignores an archived time goal', () => {
+    expect(asksForMinutes(call, [{ ...timeGoal, archivedAt: SINCE }])).toBe(false)
   })
 })
