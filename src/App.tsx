@@ -5,6 +5,7 @@ import { makeSuggest } from './suggest'
 import { SuggestContext } from './suggestContext'
 import { DEFAULT_AREAS } from './areas'
 import { AreaRings } from './components/AreaRings'
+import { AreaTimeChart } from './components/AreaTimeChart'
 import { setAreaGoals } from './areaGoals'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
@@ -23,10 +24,10 @@ import { TodoList } from './components/TodoList'
 import { WinForm } from './components/WinForm'
 import { toDateInput } from './dates'
 import { addLoggedWin, addTask, applyEntryEdit, applyWinEdit, deleteEntry, type TimeEntryPatch, type WinValues } from './edits'
-import { formatMinutes, isActive, linkByArea, syncEachGoals } from './goals'
+import { formatMinutes, isActive, linkByArea, periodEnd, periodStartFor, syncEachGoals } from './goals'
 import { archiveGoal, deleteWin, removeArea, removeGoal, restoreGoal, withStatus } from './manage'
-import { applyQuickWin, applyTemplateToWins, asksForMinutes, contributionsFor, revertTemplateApplication, undoQuickWin } from './quickWins'
-import { activityFor, dayRange } from './reports'
+import { applyQuickWin, applyTemplateToWins, asksForMinutes, contributionsFor, removeTap, revertTemplateApplication, undoQuickWin } from './quickWins'
+import { activityFor, byArea, dayRange, weekRange } from './reports'
 import { DATA_STORAGE_KEY, loadData, readRawData, requestPersistence, saveData } from './storage'
 import { deserialize } from './serialize'
 import { discardTimer, startTimer, stopTimer, type StopOptions } from './timer'
@@ -236,6 +237,17 @@ function App() {
           return { ...removed, timer: stopped }
         }),
     })
+  }
+
+  // Tapping a done task bubble takes its latest log back; the toast can bring it back again.
+  function untapTask(goal: GoalDef, quickWinId: string) {
+    const now = new Date()
+    const start = periodStartFor(goal.period, now)
+    const removed = removeTap(data, goal.id, quickWinId, start, periodEnd(goal.period, start))
+    if (!removed) return
+    const title = data.quickWins.find((q) => q.id === quickWinId)?.title ?? data.wins.find((w) => w.id === removed.winId)?.title ?? ''
+    setData(removed.data)
+    setToast({ id: crypto.randomUUID(), message: `Removed "${title}"`, undo: () => setData((d) => removed.restore(d)) })
   }
 
   // ▶ on a repeatable task: the timer runs under its name and, when stopped, logs the win with the time.
@@ -471,7 +483,7 @@ function App() {
 
         {/* The header: goal rings, and under them a bead for every win finished today. */}
         <section className="card header-card">
-          <AreaRings data={data} now={now} onLogTask={(id) => tapQuickWin(id)} />
+          <AreaRings data={data} now={now} onLogTask={(id) => tapQuickWin(id)} onUnlogTask={untapTask} />
           {leafGoals.length === 0 && (
             <div>
               <p className="muted">Goals fill the rings as you go.</p>
@@ -532,6 +544,8 @@ function App() {
 
         {/* No wins yet today: no section (an empty box feels like a to-do). */}
         {todayItems.length > 0 && <TodayWins items={todayItems} editor={todayEditor} />}
+        {/* This week's time by area, above the to-dos; nothing shows until some time is logged. */}
+        <AreaTimeChart totals={byArea(data, weekRange(now))} title="Time by area · this week" hideWhenEmpty />
         <TodoList
           tasks={unfinished}
           goals={data.goals}

@@ -72,6 +72,42 @@ export function undoQuickWin(data: AppData, winId: string, quickWinId: string): 
   }
 }
 
+// Take back the latest tap of a repeatable task that counted toward `goalId` in [start, end):
+// removes that win and its time, and gives back the use. `restore` puts it all back (for Undo)
+// without disturbing anything done since. Null if there was no such tap.
+export function removeTap(
+  data: AppData,
+  goalId: string,
+  quickWinId: string,
+  start: Date,
+  end: Date,
+): { data: AppData; winId: string; restore: (d: AppData) => AppData } | null {
+  const taps = data.wins
+    .filter(
+      (w) =>
+        w.status === 'done' &&
+        w.quickWinId === quickWinId &&
+        w.goalIds.includes(goalId) &&
+        w.completedAt !== undefined &&
+        w.completedAt.getTime() >= start.getTime() &&
+        w.completedAt.getTime() < end.getTime(),
+    )
+    .sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0))
+  const win = taps[0]
+  if (!win) return null
+  const entries = data.timeEntries.filter((e) => e.winId === win.id)
+  return {
+    data: undoQuickWin(data, win.id, quickWinId),
+    winId: win.id,
+    restore: (d) => ({
+      ...d,
+      wins: d.wins.some((w) => w.id === win.id) ? d.wins : [win, ...d.wins],
+      timeEntries: [...d.timeEntries, ...entries.filter((e) => !d.timeEntries.some((x) => x.id === e.id))],
+      quickWins: d.quickWins.map((q) => (q.id === quickWinId ? { ...q, uses: q.uses + 1 } : q)),
+    }),
+  }
+}
+
 // What a win contributes to right now, as short lines for the confirmation:
 // "Squats: 40 of 100". Only goals this win counts toward (linked to it, or counted by a rule
 // it meets) and that have a target this period appear, so a win that counts toward nothing

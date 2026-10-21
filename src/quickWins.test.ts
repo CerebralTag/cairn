@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { linkByArea, progressFor } from './goals'
-import { applyQuickWin, asksForMinutes, applyTemplateToWins, contributionsFor, revertTemplateApplication, templateHasDetails, topQuickWins, undoQuickWin, winsNamed } from './quickWins'
+import { applyQuickWin, asksForMinutes, removeTap, applyTemplateToWins, contributionsFor, revertTemplateApplication, templateHasDetails, topQuickWins, undoQuickWin, winsNamed } from './quickWins'
 import { DEFAULT_AREAS } from './areas'
 import { SINCE, amountWin, data, doneWin, guitar, session, squats, todo } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
@@ -308,5 +308,42 @@ describe('when tapping a repeatable task asks how long', () => {
   })
   it('ignores an archived time goal', () => {
     expect(asksForMinutes(call, [{ ...timeGoal, archivedAt: SINCE }])).toBe(false)
+  })
+})
+
+describe('taking a tap back', () => {
+  const chores: GoalDef = { id: 'ch', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 1 }] }
+  const dishes: QuickWin = { id: 'd', title: 'Dishes', areas: [], goalIds: ['ch'], minutes: 10, uses: 0 }
+  const START = new Date(2026, 9, 19)
+  const END = new Date(2026, 9, 26)
+  const tapped = (at: Date) => applyQuickWin(data([chores], [], [], [], [dishes]), 'd', at)!
+
+  it('removes the latest tap with its time and gives back the use', () => {
+    const first = tapped(new Date(2026, 9, 20, 9))
+    const second = applyQuickWin(first.data, 'd', new Date(2026, 9, 21, 9))!
+    const removed = removeTap(second.data, 'ch', 'd', START, END)!
+    expect(removed.winId).toBe(second.winId) // the later one goes first
+    expect(removed.data.wins.map((w) => w.id)).toEqual([first.winId])
+    expect(removed.data.timeEntries).toHaveLength(1)
+    expect(removed.data.quickWins[0].uses).toBe(1)
+  })
+
+  it('restores exactly what it removed, keeping anything done since', () => {
+    const t = tapped(new Date(2026, 9, 20, 9))
+    const removed = removeTap(t.data, 'ch', 'd', START, END)!
+    const meanwhile = { ...removed.data, wins: [doneWin(new Date(2026, 9, 22), { id: 'later' }), ...removed.data.wins] }
+    const back = removed.restore(meanwhile)
+    expect(back.wins.map((w) => w.id).sort()).toEqual([t.winId, 'later'].sort())
+    expect(back.timeEntries).toHaveLength(1)
+    expect(back.quickWins[0].uses).toBe(1)
+    expect(removed.restore(back).wins).toHaveLength(2) // restoring twice adds nothing
+  })
+
+  it('ignores taps outside the period, other tasks, and taps that did not count toward the goal', () => {
+    const last = tapped(new Date(2026, 9, 14, 9)) // the week before
+    expect(removeTap(last.data, 'ch', 'd', START, END)).toBeNull()
+    const t = tapped(new Date(2026, 9, 20, 9))
+    expect(removeTap(t.data, 'ch', 'other', START, END)).toBeNull()
+    expect(removeTap(t.data, 'nope', 'd', START, END)).toBeNull()
   })
 })

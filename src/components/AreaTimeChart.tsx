@@ -4,15 +4,25 @@ import { formatMinutes } from '../goals'
 import type { AreaTotal } from '../reports'
 
 // Time by area: one horizontal bar per area that has timed entries.
-export function AreaTimeChart({ totals }: { totals: AreaTotal[] }) {
+export function AreaTimeChart({
+  totals,
+  title = 'Time by area',
+  hideWhenEmpty = false,
+}: {
+  totals: AreaTotal[]
+  title?: string
+  hideWhenEmpty?: boolean // no box at all when nothing is timed (Today), instead of a note (History)
+}) {
   const { colourOf, nameOf } = useAreas()
   const timed = totals
     .filter((t) => t.minutes > 0)
     .map((t) => ({ name: nameOf(t.area), colour: colourOf(t.area), minutes: t.minutes }))
 
+  if (hideWhenEmpty && timed.length === 0) return null
+
   return (
     <section className="card">
-      <h2>Time by area</h2>
+      <h2>{title}</h2>
       {timed.length === 0 ? (
         <p className="muted">No timed entries in this range yet.</p>
       ) : (
