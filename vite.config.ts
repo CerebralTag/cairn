@@ -5,8 +5,10 @@ import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 
-// Which version of the code this is: the git commit, whether there were uncommitted changes
-// when it was built, and when. Shown in Manage so you can tell which build you are running.
+// Which version of the code this is, stamped at build time. Releases are CalVer git tags
+// (YYYY.MM.DD, then 2026.10.21b, c, ... for same-day follow-ups). `git describe` gives the tag
+// itself on a tagged commit, `<tag>-<N>-g<sha>` N commits past it, `-dirty` if there are
+// uncommitted changes, and just the sha if no tag exists. Shown in Manage.
 function git(command: string): string | null {
   try {
     return execSync(`git ${command}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
@@ -15,8 +17,7 @@ function git(command: string): string | null {
   }
 }
 const BUILD_INFO = {
-  commit: git('rev-parse --short HEAD') ?? 'unknown',
-  dirty: (git('status --porcelain') ?? '') !== '',
+  version: git('describe --tags --always --dirty') ?? 'unknown',
   builtAt: new Date().toISOString(),
 }
 

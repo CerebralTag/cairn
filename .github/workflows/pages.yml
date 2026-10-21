@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the whole history and its tags, so the build can say which version it is (git describe)
       - uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -1,22 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { compareBuilds, versionLabel } from './buildInfo'
+import { compareBuilds, isDirty } from './buildInfo'
 
-const running = { commit: 'abc1234', dirty: false, builtAt: '2026-10-21T22:47:00Z' }
+const running = { version: '2026.10.21', builtAt: '2026-10-21T22:47:00Z' }
 
 describe('build info', () => {
-  it('labels a clean build by its commit and a dirty one with + changes', () => {
-    expect(versionLabel(running)).toBe('abc1234')
-    expect(versionLabel({ ...running, dirty: true })).toBe('abc1234 + changes')
+  it('knows a dirty build by the -dirty suffix git describe adds', () => {
+    expect(isDirty(running)).toBe(false)
+    expect(isDirty({ ...running, version: '2026.10.21-3-gabc1234-dirty' })).toBe(true)
+    expect(isDirty({ ...running, version: 'abc1234-dirty' })).toBe(true)
   })
 
-  it('says current when the live commit matches, newer when it differs', () => {
-    expect(compareBuilds(running, { commit: 'abc1234' })).toEqual({ state: 'current' })
-    expect(compareBuilds(running, { commit: 'def5678' })).toEqual({ state: 'newer', commit: 'def5678' })
+  it('says current when the live version matches, newer when it differs', () => {
+    expect(compareBuilds(running, { version: '2026.10.21' })).toEqual({ state: 'current' })
+    expect(compareBuilds(running, { version: '2026.10.21b' })).toEqual({ state: 'newer', version: '2026.10.21b' })
+    expect(compareBuilds({ ...running, version: '2026.10.21-2-gabc1234' }, { version: '2026.10.22' })).toEqual({ state: 'newer', version: '2026.10.22' })
   })
 
   it('does not guess when it cannot compare', () => {
     expect(compareBuilds(running, null).state).toBe('unknown')
-    expect(compareBuilds(running, { nope: 1 }).state).toBe('unknown')
-    expect(compareBuilds({ ...running, dirty: true }, { commit: 'abc1234' }).state).toBe('unknown')
+    expect(compareBuilds(running, { commit: 'abc' }).state).toBe('unknown')
+    expect(compareBuilds({ ...running, version: '2026.10.21-dirty' }, { version: '2026.10.21' }).state).toBe('unknown')
   })
 })

@@ -1,25 +1,25 @@
 // Which build is running, and whether a newer one is live. Pure helpers plus two small
 // browser actions; the build constant itself comes from vite.config.ts.
 
-export type BuildInfo = { commit: string; dirty: boolean; builtAt: string }
+// `version` is `git describe --tags --always --dirty`: a CalVer tag like 2026.10.21 (or
+// 2026.10.21b), `<tag>-<N>-g<sha>` when N commits past a tag, `-dirty` for uncommitted changes,
+// or a bare sha when no tag exists.
+export type BuildInfo = { version: string; builtAt: string }
 
 export const BUILD_INFO: BuildInfo = __BUILD_INFO__
 
-// "223deb9", or "223deb9 + changes" when it was built with uncommitted changes.
-export function versionLabel(info: BuildInfo): string {
-  return info.dirty ? `${info.commit} + changes` : info.commit
-}
+export const isDirty = (info: BuildInfo): boolean => info.version.endsWith('-dirty')
 
-export type UpdateCheck = { state: 'current' } | { state: 'newer'; commit: string } | { state: 'unknown'; reason: string }
+export type UpdateCheck = { state: 'current' } | { state: 'newer'; version: string } | { state: 'unknown'; reason: string }
 
 // Compare this build with the one the server has (version.json, fetched fresh every time).
 export function compareBuilds(running: BuildInfo, live: unknown): UpdateCheck {
-  if (typeof live !== 'object' || live === null || typeof (live as BuildInfo).commit !== 'string') {
+  if (typeof live !== 'object' || live === null || typeof (live as BuildInfo).version !== 'string') {
     return { state: 'unknown', reason: "Couldn't read the live version." }
   }
-  const commit = (live as BuildInfo).commit
-  if (running.dirty) return { state: 'unknown', reason: 'This build has uncommitted changes, so it can\'t be compared.' }
-  return commit === running.commit ? { state: 'current' } : { state: 'newer', commit }
+  const version = (live as BuildInfo).version
+  if (isDirty(running)) return { state: 'unknown', reason: "This build has uncommitted changes, so it can't be compared." }
+  return version === running.version ? { state: 'current' } : { state: 'newer', version }
 }
 
 export async function checkForUpdate(running: BuildInfo = BUILD_INFO): Promise<UpdateCheck> {
