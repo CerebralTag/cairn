@@ -52,7 +52,9 @@ function fetchWithTimeout(request) {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return
+  const url = new URL(request.url)
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return
+  if (url.pathname.endsWith('/version.json')) return // always ask the network which build is live
 
   if (request.mode === 'navigate') {
     event.respondWith(

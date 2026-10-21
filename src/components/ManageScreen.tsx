@@ -2,6 +2,7 @@ import { AreasPanel } from './AreasPanel'
 import { BackupPanel } from './BackupPanel'
 import { GoalsPanel } from './GoalsPanel'
 import { TasksPanel } from './TasksPanel'
+import { VersionCard } from './VersionCard'
 
 export type ManageTab = 'tasks' | 'goals' | 'areas' | 'backup'
 
@@ -46,6 +47,8 @@ export function ManageScreen({ tab, onTab, tasks, goals, areas, backup }: Props)
       {tab === 'goals' && <GoalsPanel {...goals} />}
       {tab === 'areas' && <AreasPanel {...areas} />}
       {tab === 'backup' && <BackupPanel {...backup} />}
+
+      <VersionCard />
     </main>
   )
 }
