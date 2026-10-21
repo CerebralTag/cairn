@@ -15,6 +15,8 @@ type Props = {
   goals: GoalDef[]
   initial?: Partial<WinValues>
   withMinutes?: boolean // ad-hoc wins can record time; tasks get sessions instead
+  startKind?: 'time' | 'number' // which the box starts on when there is no amount yet
+  focusMeasure?: boolean // put the cursor in the time/number box, not the name (the name is already filled in)
   withWhen?: boolean // let the time be set, so something forgotten can be logged later
   submitLabel?: string
   onSave: (values: WinValues) => void
@@ -28,6 +30,8 @@ export function WinForm({
   goals,
   initial,
   withMinutes = false,
+  startKind = 'time',
+  focusMeasure = false,
   withWhen = false,
   submitLabel = 'Save',
   onSave,
@@ -39,7 +43,7 @@ export function WinForm({
   const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
   const [goalIds, setGoalIds] = useState<string[]>(initial?.goalIds ?? [])
   const [when, setWhen] = useState(toDateTimeInput(initial?.at ?? now))
-  const [measure, setMeasure] = useState<Measure>({ kind: initial?.amount ? 'number' : 'time', value: initial?.amount ? String(initial.amount) : '' })
+  const [measure, setMeasure] = useState<Measure>({ kind: initial?.amount ? 'number' : startKind, value: initial?.amount ? String(initial.amount) : '' })
   const [error, setError] = useState<string | null>(null)
 
   const leafGoals = goals.filter(isLinkable)
@@ -97,7 +101,7 @@ export function WinForm({
 
   return (
     <form className="card form" onSubmit={handleSubmit}>
-      <TitleInput autoFocus placeholder="What did you do?" value={title} onChange={setTitle} onPick={pickSuggestion} />
+      <TitleInput autoFocus={!focusMeasure} placeholder="What did you do?" value={title} onChange={setTitle} onPick={pickSuggestion} />
 
       {withWhen && (
         <label className="field">
@@ -129,7 +133,7 @@ export function WinForm({
       )}
 
       {/* A to-do has no time of its own (sessions are added later), so it only offers a number. */}
-      <MeasureField measure={measure} onChange={setMeasure} numberOnly={!withMinutes} />
+      <MeasureField measure={measure} onChange={setMeasure} numberOnly={!withMinutes} autoFocus={focusMeasure} />
 
       {error && (
         <p className="muted" role="alert">

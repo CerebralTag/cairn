@@ -7,6 +7,7 @@ import { DEFAULT_AREAS } from './areas'
 import { AreaRings } from './components/AreaRings'
 import { AreaTimeChart } from './components/AreaTimeChart'
 import { setAreaGoals } from './areaGoals'
+import { completeGoal, goalFormStart, goalTapAction, uncompleteGoal } from './goalTap'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
 import { NavBar, type Screen } from './components/NavBar'
@@ -31,7 +32,7 @@ import { activityFor, byArea, dayRange, weekRange } from './reports'
 import { DATA_STORAGE_KEY, loadData, readRawData, requestPersistence, saveData } from './storage'
 import { deserialize } from './serialize'
 import { discardTimer, startTimer, stopTimer, type StopOptions } from './timer'
-import type { AppData, AreaDef, GoalDef, QuickWin, Win, WinStatus } from './types'
+import type { AppData, AreaDef, GoalDef, GoalProgress, QuickWin, Win, WinStatus } from './types'
 
 const emptyData: AppData = { timer: null, areas: DEFAULT_AREAS, quickWins: [], goals: [], wins: [], timeEntries: [] }
 
@@ -52,6 +53,8 @@ function App() {
   // (never mutate), so React notices the change and re-renders.
   const [data, setData] = useState<AppData>(emptyData)
   const [logging, setLogging] = useState(false)
+  // Set when the form was opened from a goal: what it starts with. Null for the plain button.
+  const [loggingStart, setLoggingStart] = useState<{ values: Partial<WinValues>; kind: 'time' | 'number' } | null>(null)
   const [startingTimer, setStartingTimer] = useState(false)
   const [askingQuickId, setAskingQuickId] = useState<string | null>(null) // repeatable task waiting for its minutes
   const [editingKey, setEditingKey] = useState<string | null>(null) // the Today entry being fixed
@@ -160,6 +163,39 @@ function App() {
   function logWin(values: WinValues) {
     setData((d) => addLoggedWin(d, values, new Date()))
     setLogging(false)
+    setLoggingStart(null)
+  }
+
+  // Tapping a goal on Today: a single-task goal is completed (or taken back) right there, like a
+  // Chores task; any other opens "I did something" filled in for the goal.
+  function tapGoal(goal: GoalDef, progress: GoalProgress) {
+    const action = goalTapAction(goal, progress)
+    if (action === 'form') {
+      setLoggingStart(goalFormStart(goal))
+      setLogging(true)
+      return
+    }
+    if (action !== 'complete') return
+    const now = new Date()
+    const start = periodStartFor(goal.period, now)
+    if (progress.met) {
+      const removed = uncompleteGoal(data, goal, start, periodEnd(goal.period, start))
+      if (!removed) {
+        setToast({ id: crypto.randomUUID(), message: `"${goal.title}" was counted another way, so there was nothing to take back.` })
+        return
+      }
+      setData(removed.data)
+      setToast({ id: crypto.randomUUID(), message: `Removed "${goal.title}"`, undo: () => setData((d) => removed.restore(d)) })
+      return
+    }
+    const done = completeGoal(data, goal, now)
+    setData(done.data)
+    const lines = contributionsFor(done.data, done.winId, now)
+    setToast({
+      id: done.winId,
+      message: `Done "${goal.title}"${lines.length > 0 ? ` · ${lines.join(' · ')}` : ''}`,
+      undo: () => setData((d) => ({ ...d, wins: d.wins.filter((w) => w.id !== done.winId), timeEntries: d.timeEntries.filter((e) => e.winId !== done.winId) })),
+    })
   }
 
   const handleAddTask = (values: WinValues) => setData((d) => addTask(d, values, new Date()))
@@ -483,7 +519,7 @@ function App() {
 
         {/* The header: goal rings, and under them a bead for every win finished today. */}
         <section className="card header-card">
-          <AreaRings data={data} now={now} onLogTask={(id) => tapQuickWin(id)} onUnlogTask={untapTask} />
+          <AreaRings data={data} now={now} onLogTask={(id) => tapQuickWin(id)} onUnlogTask={untapTask} onTapGoal={tapGoal} />
           {leafGoals.length === 0 && (
             <div>
               <p className="muted">Goals fill the rings as you go.</p>
@@ -500,16 +536,28 @@ function App() {
         {logging ? (
           <WinForm
             goals={data.goals}
+            initial={loggingStart?.values}
+            startKind={loggingStart?.kind}
+            focusMeasure={loggingStart !== null}
             withMinutes
             withWhen
             onSave={logWin}
-            onCancel={() => setLogging(false)}
+            onCancel={() => {
+              setLogging(false)
+              setLoggingStart(null)
+            }}
           />
         ) : startingTimer ? (
           <TimerStarter goals={data.goals} tasks={unfinished} onStart={beginTimer} onCancel={() => setStartingTimer(false)} />
         ) : (
           <>
-            <button className="did-something" onClick={() => setLogging(true)}>
+            <button
+              className="did-something"
+              onClick={() => {
+                setLoggingStart(null)
+                setLogging(true)
+              }}
+            >
               I did something
             </button>
             {/* With repeatable tasks, one row does logging and timing; without, the plain timer button. */}
@@ -531,7 +579,10 @@ function App() {
                 timerRunning={timerRunning}
                 onLog={(id) => tapQuickWin(id)}
                 onStart={beginQuickTimer}
-                onElseLog={() => setLogging(true)}
+                onElseLog={() => {
+                  setLoggingStart(null)
+                  setLogging(true)
+                }}
                 onElseStart={() => setStartingTimer(true)}
               />
             ) : (

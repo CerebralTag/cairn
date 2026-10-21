@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { PERIOD_WORDS, formatMinutes, progressLabel } from '../goals'
 import { areaCards, goalColourFor, goalDisplay, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
-import type { AppData, GoalDef } from '../types'
+import { goalTapAction } from '../goalTap'
+import type { AppData, GoalDef, GoalProgress } from '../types'
 
 const MAX_PER_ROW = 4 // more areas than this wrap onto a second row
 const RADIUS = 27
@@ -94,21 +95,36 @@ function GoalRow({
   colour,
   onLogTask,
   onUnlogTask,
+  onTapGoal,
 }: {
   item: AreaGoal
   colour: string
   onLogTask?: (quickWinId: string) => void
   onUnlogTask?: (goal: GoalDef, quickWinId: string) => void
+  onTapGoal?: (goal: GoalDef, progress: GoalProgress) => void
 }) {
   const { goal, progress, steps } = item
   const display = goalDisplay(goal, progress)
+  // A goal that counts by tapping is a button on its name line (not on the Chores-style bubbles,
+  // which have their own taps); the rest of the row stays as it was.
+  const tappable = onTapGoal !== undefined && goalTapAction(goal, progress) !== null
+  const tap = () => onTapGoal?.(goal, progress)
   if (display === 'task') {
+    const body = (
+      <>
+        <span className="goal-row-title">{goal.title}</span>
+        {progress.met && <Bubble on colour={colour} />}
+      </>
+    )
     return (
       <div className="goal-row">
-        <div className="goal-row-head">
-          <span className="goal-row-title">{goal.title}</span>
-          {progress.met && <Bubble on colour={colour} />}
-        </div>
+        {tappable ? (
+          <button className="goal-row-head goal-row-tap" onClick={tap} aria-label={progress.met ? `Take back ${goal.title}` : `Complete ${goal.title}`}>
+            {body}
+          </button>
+        ) : (
+          <div className="goal-row-head">{body}</div>
+        )}
       </div>
     )
   }
@@ -116,15 +132,27 @@ function GoalRow({
 
   return (
     <div className="goal-row">
-      <div className="goal-row-head">
-        <span>
-          <span className="goal-row-title">{goal.title}</span> <span className="muted period">{PERIOD_WORDS[goal.period].this}</span>
-        </span>
-        <span className="muted nowrap">
-          {progress.met ? '✓ ' : ''}
-          {label}
-        </span>
-      </div>
+      {tappable ? (
+        <button className="goal-row-head goal-row-tap" onClick={tap} aria-label={`Log ${goal.title}`}>
+          <span>
+            <span className="goal-row-title">{goal.title}</span> <span className="muted period">{PERIOD_WORDS[goal.period].this}</span>
+          </span>
+          <span className="muted nowrap">
+            {progress.met ? '✓ ' : ''}
+            {label}
+          </span>
+        </button>
+      ) : (
+        <div className="goal-row-head">
+          <span>
+            <span className="goal-row-title">{goal.title}</span> <span className="muted period">{PERIOD_WORDS[goal.period].this}</span>
+          </span>
+          <span className="muted nowrap">
+            {progress.met ? '✓ ' : ''}
+            {label}
+          </span>
+        </div>
+      )}
       {display === 'bar' && (
         <div className="goal-bar" role="img" aria-label={`${Math.round(progress.fraction * 100)} percent`}>
           <div className="goal-bar-fill" style={{ width: `${progress.fraction * 100}%`, background: colour }} />
@@ -187,9 +215,10 @@ type RingsProps = {
   now: Date
   onLogTask?: (quickWinId: string) => void
   onUnlogTask?: (goal: GoalDef, quickWinId: string) => void
+  onTapGoal?: (goal: GoalDef, progress: GoalProgress) => void
 }
 
-export function AreaRings({ data, now, onLogTask, onUnlogTask }: RingsProps) {
+export function AreaRings({ data, now, onLogTask, onUnlogTask, onTapGoal }: RingsProps) {
   const cards = areaCards(data, now)
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const picked = cards.find((c) => c.key === pickedKey) // a ring that has since gone means "all"
@@ -211,8 +240,8 @@ export function AreaRings({ data, now, onLogTask, onUnlogTask }: RingsProps) {
       )}
       <div className="area-goals" aria-label={picked ? `${picked.name} goals` : 'Goals'}>
         {picked
-          ? picked.goals.map((item) => <GoalRow key={item.goal.id} item={item} colour={picked.colour} onLogTask={onLogTask} onUnlogTask={onUnlogTask} />)
-          : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} onLogTask={onLogTask} onUnlogTask={onUnlogTask} />)}
+          ? picked.goals.map((item) => <GoalRow key={item.goal.id} item={item} colour={picked.colour} onLogTask={onLogTask} onUnlogTask={onUnlogTask} onTapGoal={onTapGoal} />)
+          : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} onLogTask={onLogTask} onUnlogTask={onUnlogTask} onTapGoal={onTapGoal} />)}
         {picked?.tasks.map((t) => (
           <div key={t.id} className="goal-row">
             <div className="goal-row-head">

@@ -960,3 +960,20 @@
   font-weight: 600;
   color: var(--color-text);
 }
+
+/* A goal's name line as a button: looks the same, just tappable */
+.goal-row-tap {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.goal-row-tap:active {
+  background: var(--color-ring-track);
+}

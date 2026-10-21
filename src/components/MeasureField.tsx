@@ -9,10 +9,12 @@ export function MeasureField({
   measure,
   onChange,
   numberOnly = false,
+  autoFocus = false,
 }: {
   measure: Measure
   onChange: (m: Measure) => void
   numberOnly?: boolean // no time choice (a to-do's time comes from sessions later)
+  autoFocus?: boolean
 }) {
   return (
     <div className="measure">
@@ -24,6 +26,7 @@ export function MeasureField({
       )}
       <input
         type="number"
+        autoFocus={autoFocus}
         min="1"
         max={MAX_NUMBER}
         aria-label={measure.kind === 'time' && !numberOnly ? 'Minutes' : 'Amount'}
