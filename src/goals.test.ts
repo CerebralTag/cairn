@@ -9,8 +9,8 @@ import {
   isLinkable,
   isTemplateLinkable,
   syncEachGoals,
+  eachNeed,
   eachSteps,
-  timesFor,
   taggedTemplates,
   linkByArea,
   periodEnd,
@@ -21,7 +21,7 @@ import {
   withTarget,
 } from './goals'
 import { SINCE, data, doneWin, guitar, session, todo, workouts } from './testHelpers'
-import type { GoalDef } from './types'
+import type { GoalDef, QuickWin } from './types'
 
 // Months are 0-based in JS: new Date(2026, 9, 12) is 12 Oct 2026, a Monday.
 const MON = new Date(2026, 9, 12)
@@ -490,31 +490,60 @@ describe('a goal met by doing each tagged repeatable task once', () => {
   })
 })
 
-describe('each goals where a task is needed several times', () => {
-  const litter: GoalDef = {
-    id: 'chores', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each',
-    stepTimes: { litter: 3 }, targets: [{ from: SINCE, amount: 4 }], // litter x3 + dishes x1
+describe('each goals follow what each task itself needs', () => {
+  const chores: GoalDef = { id: 'chores', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 3 }] }
+  const q = (id: string, extra: Partial<QuickWin> = {}): QuickWin => ({ id, title: id, areas: [], goalIds: ['chores'], uses: 0, ...extra })
+  const litter = q('litter', { amount: 3 }) // a number of 3: needed three times
+  const reading = q('reading', { minutes: 120 }) // minutes: needed for two hours
+  const dishes = q('dishes') // plain: once
+  const base = { ...data([chores]), quickWins: [litter, reading, dishes] }
+  const tap = (id: string, day = 12, minutes?: number) => {
+    const win = doneWin(new Date(2026, 9, day, 9), { id: `${id}-${day}`, origin: 'quick', quickWinId: id, goalIds: ['chores'] })
+    return { win, entry: minutes ? session(new Date(2026, 9, day, 9), minutes, { winId: win.id }) : undefined }
   }
-  const q = (id: string) => ({ id, title: id, areas: [], goalIds: ['chores'], uses: 0 })
-  const base = { ...data([litter]), quickWins: [q('litter'), q('dishes')] }
-  const tap = (id: string, day = 12) => doneWin(new Date(2026, 9, day, 9), { origin: 'quick', quickWinId: id, goalIds: ['chores'] })
+  const withTaps = (taps: ReturnType<typeof tap>[]) => ({
+    ...base,
+    wins: taps.map((t) => t.win),
+    timeEntries: taps.flatMap((t) => (t.entry ? [t.entry] : [])),
+  })
+  const step = (d: ReturnType<typeof withTaps>, id: string) => eachSteps(chores, d, MON).find((s) => s.id === id)!
 
-  it('is not done after one of three, and shows how far along it is', () => {
-    const d = { ...base, wins: [tap('litter')] }
-    expect(eachSteps(litter, d, MON).find((s) => s.id === 'litter')).toMatchObject({ count: 1, times: 3, done: false })
-    expect(progressFor(litter, d, MON)).toMatchObject({ done: 1, target: 4, met: false })
+  it('reads what a task needs from the task: minutes, else its number of 2 or more, else once', () => {
+    expect(eachNeed(reading)).toEqual({ unit: 'minutes', need: 120 })
+    expect(eachNeed(litter)).toEqual({ unit: 'taps', need: 3 })
+    expect(eachNeed(dishes)).toEqual({ unit: 'taps', need: 1 })
+    expect(eachNeed(q('one', { amount: 1 }))).toEqual({ unit: 'taps', need: 1 })
   })
 
-  it('is done at three, and extra taps do not push the goal past what is needed', () => {
-    const d = { ...base, wins: [tap('litter', 12), tap('litter', 13), tap('litter', 14), tap('litter', 15), tap('dishes')] }
-    expect(eachSteps(litter, d, MON).find((s) => s.id === 'litter')?.done).toBe(true)
-    expect(progressFor(litter, d, MON)).toMatchObject({ done: 4, target: 4, met: true })
+  it('a task needed three times is not done after one tap, and is after three', () => {
+    const one = withTaps([tap('litter', 12)])
+    expect(step(one, 'litter')).toMatchObject({ count: 1, need: 3, done: false })
+    expect(progressFor(chores, one, MON)).toMatchObject({ done: 0, target: 3, met: false })
+    const three = withTaps([tap('litter', 12), tap('litter', 13), tap('litter', 14)])
+    expect(step(three, 'litter').done).toBe(true)
+    expect(progressFor(chores, three, MON).done).toBe(1)
   })
 
-  it('sets the target to the total times needed, and defaults a task to once', () => {
-    const fresh = { ...base, goals: [{ ...litter, targets: [] }] }
-    expect(syncEachGoals(fresh, MON).goals[0].targets.at(-1)?.amount).toBe(4)
-    expect(timesFor(litter, 'dishes')).toBe(1)
-    expect(timesFor(litter, 'litter')).toBe(3)
+  it('a task needed for a length of time adds up the minutes logged on its taps', () => {
+    const part = withTaps([tap('reading', 12, 45)])
+    expect(step(part, 'reading')).toMatchObject({ unit: 'minutes', count: 45, need: 120, done: false })
+    const full = withTaps([tap('reading', 12, 45), tap('reading', 13, 75)])
+    expect(step(full, 'reading')).toMatchObject({ count: 120, done: true })
+  })
+
+  it('is met when every tagged task has had what it needs, with partial progress in the ring', () => {
+    const all = withTaps([tap('litter', 12), tap('litter', 13), tap('litter', 14), tap('reading', 12, 120), tap('dishes')])
+    expect(progressFor(chores, all, MON)).toMatchObject({ done: 3, target: 3, met: true })
+    const some = withTaps([tap('litter', 12), tap('dishes')]) // litter 1/3, dishes done, reading none
+    const p = progressFor(chores, some, MON)
+    expect(p).toMatchObject({ done: 1, met: false })
+    expect(p.fraction).toBeCloseTo((1 / 3 + 1) / 3)
+  })
+
+  it('keeps a removed task\'s hit, and records the number of tagged tasks as the target', () => {
+    const d = withTaps([tap('dishes')])
+    const gone = { ...d, quickWins: [litter, reading] }
+    expect(progressFor(chores, gone, MON).done).toBe(1)
+    expect(syncEachGoals({ ...base, goals: [{ ...chores, targets: [] }] }, MON).goals[0].targets.at(-1)?.amount).toBe(3)
   })
 })

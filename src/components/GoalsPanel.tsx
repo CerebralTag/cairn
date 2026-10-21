@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useAreas } from '../areasContext'
 import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, withTarget } from '../goals'
-import type { GoalDef, QuickWin } from '../types'
+import type { GoalDef } from '../types'
 import { GoalForm } from './GoalForm'
 
 type Props = {
   goals: GoalDef[]
-  quickWins: QuickWin[]
   onSave: (goal: GoalDef, backfill: boolean) => void
   onArchive: (id: string) => void
   onRestore: (id: string) => void
@@ -41,7 +40,7 @@ const STARTERS: { label: string; title: string; kind: 'count' | 'time'; source: 
   { label: '10 hours of anything', title: '10 hours of anything', kind: 'time', source: 'any', amount: 600 },
 ]
 
-export function GoalsPanel({ goals, quickWins, onSave, onArchive, onRestore, onDelete }: Props) {
+export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Props) {
   const { goalColour, nameOf } = useAreas()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -83,7 +82,7 @@ export function GoalsPanel({ goals, quickWins, onSave, onArchive, onRestore, onD
             editingId === goal.id ? (
               <li key={goal.id}>
                 <div className="grow">
-                  <GoalForm initial={goal} allGoals={goals} quickWins={quickWins} onSave={save} onCancel={() => setEditingId(null)} />
+                  <GoalForm initial={goal} allGoals={goals} onSave={save} onCancel={() => setEditingId(null)} />
                 </div>
               </li>
             ) : (

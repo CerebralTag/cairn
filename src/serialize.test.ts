@@ -299,15 +299,3 @@ describe('the Other ring switch', () => {
     expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
   })
 })
-
-describe('how often each task is needed', () => {
-  it('round-trips stepTimes and rejects nonsense', () => {
-    const goal = { ...workouts, source: 'each' as const, stepTimes: { litter: 3 } }
-    expect(deserialize(serialize({ ...sample, goals: [goal] })).goals[0].stepTimes).toEqual({ litter: 3 })
-    for (const bad of [{ litter: 0 }, { litter: 1.5 }, { litter: 'x' }, [3]]) {
-      const raw = JSON.parse(serialize({ ...sample, goals: [goal] }))
-      raw.goals[0].stepTimes = bad
-      expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
-    }
-  })
-})

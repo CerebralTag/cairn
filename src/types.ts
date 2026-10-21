@@ -81,7 +81,6 @@ export type GoalDef = {
   period: GoalPeriod // how often the target repeats
   archivedAt?: Date // archived goals stop appearing, but their past periods keep their results
   source?: GoalSource // what counts toward it; absent means 'linked'
-  stepTimes?: Record<string, number> // "each" goals: how often a tagged task is needed per period (default 1), by repeatable-task id
 }
 
 // Calculated from entries, never stored.

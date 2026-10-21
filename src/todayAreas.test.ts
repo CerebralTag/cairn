@@ -111,8 +111,8 @@ describe('eachSteps', () => {
   it('lists each tagged task and whether it was done this period', () => {
     const d = { ...data([chores], [doneWin(WED, { origin: 'quick', quickWinId: 'dishes', goalIds: ['c'] })]), quickWins: [q('dishes'), q('bins')] }
     expect(eachSteps(chores, d, MON)).toEqual([
-      { id: 'dishes', title: 'dishes', count: 1, times: 1, done: true },
-      { id: 'bins', title: 'bins', count: 0, times: 1, done: false },
+      { id: 'dishes', title: 'dishes', count: 1, need: 1, unit: 'taps', done: true },
+      { id: 'bins', title: 'bins', count: 0, need: 1, unit: 'taps', done: false },
     ])
   })
 })

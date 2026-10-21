@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PERIOD_WORDS, progressLabel } from '../goals'
+import { PERIOD_WORDS, formatMinutes, progressLabel } from '../goals'
 import { areaCards, goalColourFor, goalDisplay, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
 import type { AppData, GoalDef } from '../types'
 
@@ -42,16 +42,24 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
   )
 }
 
-function Bubble({ on, colour, big, part }: { on: boolean; colour: string; big?: boolean; part?: number }) {
-  // `part`: a task needed several times, done some of them but not yet enough: show how many.
+function Bubble({ on, colour, big, part }: { on: boolean; colour: string; big?: boolean; part?: number | true }) {
+  // `part`: a task that needs more than one go, started but not yet enough: an outline in the
+  // colour, with the count inside when it is a count.
   return (
     <span
       className={`bubble${on ? ' on' : ''}${big ? ' big' : ''}`}
       style={on ? { background: colour } : part ? { borderColor: colour, color: 'var(--color-text)' } : undefined}
     >
-      {on ? '✓' : part ? part : ''}
+      {on ? '✓' : typeof part === 'number' ? part : ''}
     </span>
   )
+}
+
+// "1/3" for a task needed several times, "45m/2h" for one needed for a length of time; nothing
+// for the usual once-only task.
+function progressText(s: { count: number; need: number; unit: 'taps' | 'minutes' }): string | null {
+  if (s.unit === 'minutes') return `${formatMinutes(Math.min(s.count, s.need))}/${formatMinutes(s.need)}`
+  return s.need > 1 ? `${Math.min(s.count, s.need)}/${s.need}` : null
 }
 
 // One goal, drawn by what it is: a bar, a few bubbles, or a labelled bubble per task.
@@ -108,11 +116,11 @@ function GoalRow({
           {(steps ?? []).map((s) => {
             const inner = (
               <>
-                <Bubble on={s.done} colour={colour} big part={s.done ? undefined : s.count} />
+                <Bubble on={s.done} colour={colour} big part={s.done || s.count === 0 ? undefined : s.unit === 'taps' ? s.count : true} />
                 <span className="step-name">
                   <span className="sr-only">{s.done ? 'Done: ' : 'Not yet: '}</span>
                   {s.title}
-                  {s.times > 1 && <span className="muted step-count"> {Math.min(s.count, s.times)}/{s.times}</span>}
+                  {progressText(s) && <span className="muted step-count"> {progressText(s)}</span>}
                 </span>
               </>
             )
@@ -120,7 +128,7 @@ function GoalRow({
             // that is done takes the latest log back, so a slip is one tap to fix.
             if (!s.done && onLogTask) {
               return (
-                <button key={s.id} className="step step-button" aria-label={s.times > 1 ? `Log ${s.title} (${s.count} of ${s.times})` : `Log ${s.title}`} onClick={() => onLogTask(s.id)}>
+                <button key={s.id} className="step step-button" aria-label={progressText(s) ? `Log ${s.title} (${progressText(s)})` : `Log ${s.title}`} onClick={() => onLogTask(s.id)}>
                   {inner}
                 </button>
               )

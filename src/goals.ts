@@ -69,51 +69,54 @@ export function taggedTemplates(goal: GoalDef, data: AppData): QuickWin[] {
   return data.quickWins.filter((q) => q.goalIds.includes(goal.id))
 }
 
-// How many times a tagged task must be done per period for an "each" goal (1 unless set).
-export function timesFor(goal: GoalDef, quickWinId: string): number {
-  return Math.max(1, goal.stepTimes?.[quickWinId] ?? 1)
+// What a tagged task needs for an "each" goal, read from the task itself: minutes if it has
+// minutes ("2 hours"), else that many taps if it has a number of 2 or more ("3 a week"), else once.
+export type EachNeed = { unit: 'taps' | 'minutes'; need: number }
+
+export function eachNeed(template: QuickWin): EachNeed {
+  if (template.minutes) return { unit: 'minutes', need: template.minutes }
+  if (template.amount && template.amount >= 2) return { unit: 'taps', need: Math.round(template.amount) }
+  return { unit: 'taps', need: 1 }
 }
 
-// The tagged repeatable tasks of an "each" goal: how often each was done in the period starting
-// at `periodStart`, how often it must be, and whether that is enough.
-export type EachStep = { id: string; title: string; count: number; times: number; done: boolean }
+// The tagged repeatable tasks of an "each" goal: how far each got in the period starting at
+// `periodStart` (taps or minutes), what it needs, and whether that is enough.
+export type EachStep = { id: string; title: string; count: number; need: number; unit: 'taps' | 'minutes'; done: boolean }
 
 export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): EachStep[] {
   const start = periodStart.getTime()
   const end = periodEnd(goal.period, periodStart).getTime()
-  const counts = eachCounts(goal, data, start, end)
+  const taps = eachTaps(goal, data, start, end)
   return taggedTemplates(goal, data).map((q) => {
-    const count = counts.get(q.id) ?? 0
-    const times = timesFor(goal, q.id)
-    return { id: q.id, title: q.title, count, times, done: count >= times }
+    const { unit, need } = eachNeed(q)
+    const mine = taps.get(q.id) ?? []
+    const count =
+      unit === 'taps'
+        ? mine.length
+        : data.timeEntries.filter((e) => e.winId !== undefined && mine.includes(e.winId)).reduce((sum, e) => sum + e.minutes, 0)
+    return { id: q.id, title: q.title, count, need, unit, done: count >= need }
   })
 }
 
-// How often each repeatable task was done in [start, end) toward an "each" goal: finished wins
-// carrying the goal's id (copied from the task when it was tapped, so this stays true even if
-// the task is later renamed, untagged or removed).
-function eachCounts(goal: GoalDef, data: AppData, start: number, end: number): Map<string, number> {
-  const counts = new Map<string, number>()
+// The finished wins in [start, end) that counted toward an "each" goal, by repeatable task:
+// wins carrying the goal's id (copied from the task when it was tapped, so this stays true
+// even if the task is later renamed, untagged or removed). Values are the wins' ids.
+function eachTaps(goal: GoalDef, data: AppData, start: number, end: number): Map<string, string[]> {
+  const taps = new Map<string, string[]>()
   for (const w of data.wins) {
     if (w.status !== 'done' || !w.completedAt || !w.quickWinId || !w.goalIds.includes(goal.id)) continue
-    if (w.completedAt.getTime() >= start && w.completedAt.getTime() < end) counts.set(w.quickWinId, (counts.get(w.quickWinId) ?? 0) + 1)
+    if (w.completedAt.getTime() >= start && w.completedAt.getTime() < end) taps.set(w.quickWinId, [...(taps.get(w.quickWinId) ?? []), w.id])
   }
-  return counts
+  return taps
 }
 
-// What an "each" goal's target should be right now: the times its tagged tasks are each needed.
-function eachTarget(goal: GoalDef, data: AppData): number {
-  return taggedTemplates(goal, data).reduce((sum, q) => sum + timesFor(goal, q.id), 0)
-}
-
-// "Each" goals take their target from their tagged tasks (and how often each is needed). Whenever
-// that changes, record the new number from the current period on, so earlier periods keep the
-// target they had.
+// "Each" goals take their target from how many tasks are tagged. Whenever that changes, record
+// the new number from the current period on, so earlier periods keep the target they had.
 export function syncEachGoals(data: AppData, now: Date): AppData {
   let changed = false
   const goals = data.goals.map((g) => {
     if (g.childIds || !isActive(g) || goalSource(g) !== 'each') return g
-    const count = eachTarget(g, data)
+    const count = taggedTemplates(g, data).length
     if (g.targets.length > 0 && currentTarget(g, now) === count) return g
     changed = true
     return withTarget(g, count, now)
@@ -236,18 +239,19 @@ export function progressFor(goal: GoalDef, data: AppData, periodStart: Date): Go
   const source = goalSource(goal)
   let done: number
   if (source === 'each') {
-    // Each tagged task counts up to the number of times it is needed; a task since removed or
-    // untagged counts once, so a past hit is never erased. The target is the total needed at the
-    // time (kept in the target history by syncEachGoals), and what was done comes from the wins
-    // themselves, so changing the tasks later never rewrites a past period.
-    const counts = eachCounts(goal, data, start, end)
-    const tagged = new Set(taggedTemplates(goal, data).map((q) => q.id))
-    let eachDone = 0
-    for (const [id, count] of counts) eachDone += Math.min(count, tagged.has(id) ? timesFor(goal, id) : 1)
+    // Met when as many tasks are complete as the target says. A task is complete when it has been
+    // done as much as it needs (read from the task: its minutes, or its number of taps, else once);
+    // a task since removed or untagged counts once it was done, so a past hit is never erased. The
+    // target is how many were tagged at the time (kept in the target history by syncEachGoals).
+    const steps = eachSteps(goal, data, periodStart)
+    const tagged = new Set(steps.map((s) => s.id))
+    const gone = [...eachTaps(goal, data, start, end).keys()].filter((id) => !tagged.has(id)).length
+    const eachDone = steps.filter((s) => s.done).length + gone
+    const sum = steps.reduce((t, s) => t + Math.min(s.count / s.need, 1), 0) + gone
     return {
       done: eachDone,
       target,
-      fraction: target > 0 ? Math.min(eachDone / target, 1) : 0,
+      fraction: target > 0 ? Math.min(sum / target, 1) : 0,
       met: target > 0 && eachDone >= target,
     }
   }

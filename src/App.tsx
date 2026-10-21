@@ -426,7 +426,6 @@ function App() {
           }}
           goals={{
             goals: data.goals,
-            quickWins: data.quickWins,
             onSave: saveGoal,
             onArchive: (id) => setData((d) => archiveGoal(d, id, new Date())),
             onRestore: (id) => setData((d) => restoreGoal(d, id)),
