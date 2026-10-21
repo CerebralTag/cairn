@@ -6,6 +6,13 @@ export function VersionCard() {
   const [result, setResult] = useState<UpdateCheck | null>(null)
   const [checking, setChecking] = useState(false)
 
+  const [refreshNote, setRefreshNote] = useState<string | null>(null)
+
+  async function refresh() {
+    setRefreshNote(null)
+    setRefreshNote(await refreshApp())
+  }
+
   async function check() {
     setChecking(true)
     setResult(await checkForUpdate())
@@ -22,14 +29,19 @@ export function VersionCard() {
           {checking ? 'Checking…' : 'Check for updates'}
         </button>
         {result?.state === 'newer' && (
-          <button className="primary" onClick={refreshApp}>
+          <button className="primary" onClick={refresh}>
             Update to {result.version}
           </button>
         )}
-        <button className="link" onClick={refreshApp}>
+        <button className="link" onClick={refresh}>
           Reload fresh
         </button>
       </div>
+      {refreshNote && (
+        <p className="muted" role="status">
+          {refreshNote}
+        </p>
+      )}
       {result && (
         <p className="muted" role="status">
           {result.state === 'current' && "You're on the latest version."}

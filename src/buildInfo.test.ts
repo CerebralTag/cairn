@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareBuilds, isDirty } from './buildInfo'
+import { compareBuilds, isDirty, serverReachable } from './buildInfo'
 
 const running = { version: '2026.10.21', builtAt: '2026-10-21T22:47:00Z' }
 
@@ -20,5 +20,21 @@ describe('build info', () => {
     expect(compareBuilds(running, null).state).toBe('unknown')
     expect(compareBuilds(running, { commit: 'abc' }).state).toBe('unknown')
     expect(compareBuilds({ ...running, version: '2026.10.21-dirty' }, { version: '2026.10.21' }).state).toBe('unknown')
+  })
+})
+
+describe('serverReachable', () => {
+  const answer = (ok: boolean) => (async () => ({ ok }) as Response) as typeof fetch
+
+  it('is true when the server answers, false when it errors or answers badly', async () => {
+    expect(await serverReachable(answer(true))).toBe(true)
+    expect(await serverReachable(answer(false))).toBe(false)
+    expect(await serverReachable((async () => { throw new TypeError('offline') }) as typeof fetch)).toBe(false)
+  })
+
+  it('gives up after the timeout instead of hanging', async () => {
+    const hang = ((_: unknown, init?: RequestInit) =>
+      new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new Error('aborted'))))) as typeof fetch
+    expect(await serverReachable(hang, 20)).toBe(false)
   })
 })

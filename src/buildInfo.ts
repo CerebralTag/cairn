@@ -34,9 +34,28 @@ export async function checkForUpdate(running: BuildInfo = BUILD_INFO): Promise<U
   }
 }
 
-// Fetch the newest copy: drop the offline cache and the service worker, then reload. Your data
-// lives elsewhere (localStorage) and is untouched.
-export async function refreshApp(): Promise<void> {
+// Whether the server answers right now. Refreshing clears the offline copy first, so it must
+// only go ahead when the new files can actually be fetched.
+export async function serverReachable(fetchImpl: typeof fetch = fetch, timeoutMs = 5000): Promise<boolean> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetchImpl(`./version.json?t=${Date.now()}`, { cache: 'no-store', signal: controller.signal })
+    return response.ok
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export const OFFLINE_REFRESH_MESSAGE = "You're offline, so nothing was changed. The copy saved on this device still works."
+
+// Fetch the newest copy: drop the offline cache and the service worker, then reload. Does nothing
+// (and says why) if the server can't be reached, so a refresh can never leave the app unable to
+// open. Your data lives elsewhere (localStorage) and is untouched.
+export async function refreshApp(): Promise<string | null> {
+  if (!(await serverReachable())) return OFFLINE_REFRESH_MESSAGE
   try {
     const registrations = await navigator.serviceWorker?.getRegistrations?.()
     await Promise.all((registrations ?? []).map((r) => r.unregister()))
@@ -46,4 +65,5 @@ export async function refreshApp(): Promise<void> {
     // Reloading below still helps.
   }
   window.location.reload()
+  return null
 }
