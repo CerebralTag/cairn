@@ -81,6 +81,7 @@ export type GoalDef = {
   period: GoalPeriod // how often the target repeats
   archivedAt?: Date // archived goals stop appearing, but their past periods keep their results
   source?: GoalSource // what counts toward it; absent means 'linked'
+  tracked?: false // a Routine only: false = just a container for repeatable tasks (no ring, history or target); absent = tracked
 }
 
 // Calculated from entries, never stored.

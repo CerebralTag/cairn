@@ -1,6 +1,6 @@
 // Quick wins: one-tap templates for wins ("10 squats"). Tapping one logs an ordinary
 // win with the template's amount, areas and goal links (and minutes, if it has them).
-import { goalSource, isActive, periodStartFor, progressFor, progressLabel, targetFor } from './goals'
+import { goalSource, isActive, isTracked, periodStartFor, progressFor, progressLabel, targetFor } from './goals'
 import { nameKey } from './suggest'
 import type { AppData, QuickWin, TimeEntry, Win } from './types'
 
@@ -132,7 +132,7 @@ export function contributionsFor(data: AppData, winId: string, now: Date): strin
     }
   }
   return data.goals
-    .filter((g) => !g.childIds && isActive(g))
+    .filter((g) => !g.childIds && isActive(g) && isTracked(g))
     .filter(helps)
     .filter((g) => (targetFor(g, periodStartFor(g.period, now)) ?? 0) > 0)
     .map((g) => `${g.title}: ${progressLabel(g, progressFor(g, data, periodStartFor(g.period, now)))}`)

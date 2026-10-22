@@ -1,7 +1,7 @@
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { TooltipContentProps } from 'recharts'
 import { useAreas } from '../areasContext'
-import { progressLabel } from '../goals'
+import { isTracked, progressLabel } from '../goals'
 import type { GoalPeriod } from '../types'
 import { goalHistory, type DateRange } from '../reports'
 import type { AppData } from '../types'
@@ -32,7 +32,7 @@ function PeriodTooltip({ active, payload }: TooltipContentProps) {
 // check, weeks below target get no mark (no red, no "missed").
 export function GoalHistoryChart({ appData, range }: { appData: AppData; range: DateRange }) {
   const { goalColour } = useAreas()
-  const leafGoals = appData.goals.filter((g) => !g.childIds)
+  const leafGoals = appData.goals.filter((g) => !g.childIds && isTracked(g))
 
   return (
     <section className="card">

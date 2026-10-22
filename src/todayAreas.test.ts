@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OTHER_KEY, areaCards, goalColourFor, goalDisplay, ringCentre, todayGoals } from './todayAreas'
+import { OTHER_KEY, areaCards, areasColour, goalColourFor, goalDisplay, ringCentre, todayGoals } from './todayAreas'
 import { eachSteps } from './goals'
 import { SINCE, data, doneWin, guitar, session, squats, todo, workouts } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
@@ -104,8 +104,8 @@ describe('eachSteps', () => {
   it('lists each tagged task and whether it was done this period', () => {
     const d = { ...data([chores], [doneWin(WED, { origin: 'quick', quickWinId: 'dishes', goalIds: ['c'] })]), quickWins: [q('dishes'), q('bins')] }
     expect(eachSteps(chores, d, MON)).toEqual([
-      { id: 'dishes', title: 'dishes', count: 1, need: 1, unit: 'taps', done: true },
-      { id: 'bins', title: 'bins', count: 0, need: 1, unit: 'taps', done: false },
+      { id: 'dishes', title: 'dishes', areas: [], count: 1, need: 1, unit: 'taps', done: true },
+      { id: 'bins', title: 'bins', areas: [], count: 0, need: 1, unit: 'taps', done: false },
     ])
   })
 })
@@ -151,5 +151,30 @@ describe('ringCentre', () => {
   it('never shows a zero: an area with no goals owes nothing', () => {
     expect(ringCentre(0, 0)).toBe('✓')
     for (const [m, t] of [[0, 1], [0, 3], [1, 3], [3, 3], [0, 0]]) expect(ringCentre(m, t)).not.toMatch(/0/)
+  })
+})
+
+describe('a Routine kept as a container', () => {
+  const box: GoalDef = { id: 'box', title: 'Evening', areas: [], kind: 'count', period: 'week', source: 'each', tracked: false, targets: [{ from: SINCE, amount: 2 }] }
+  const tracked: GoalDef = { ...box, id: 'tr', title: 'Chores', tracked: undefined, areas: ['music'] }
+
+  it('feeds no ring, but still shows on Today for logging', () => {
+    const d = withAreas(data([box, tracked]))
+    expect(areaCards(d, WED).flatMap((c) => c.goals.map((g) => g.goal.id))).toEqual(['tr'])
+    expect(todayGoals(d, WED).map((i) => i.goal.id).sort()).toEqual(['box', 'tr'])
+  })
+
+  it('is not an Other-ring goal either', () => {
+    const d = { ...withAreas(data([box])), areas: [] }
+    expect(areaCards(d, WED)).toEqual([])
+  })
+})
+
+describe('areasColour', () => {
+  it('is the colour of the first area that exists, else null (so a caller can fall back)', () => {
+    const areas = withAreas(data([])).areas
+    expect(areasColour(areas, ['gone', 'health'])).toBe('var(--palette-2)')
+    expect(areasColour(areas, [])).toBeNull()
+    expect(areasColour(areas, ['gone'])).toBeNull()
   })
 })

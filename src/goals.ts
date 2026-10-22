@@ -58,6 +58,12 @@ export function isLinkable(goal: GoalDef): boolean {
   return !goal.childIds && isActive(goal) && goalSource(goal) === 'linked'
 }
 
+// Goals that count toward rings, history and "x of y": everything except a Routine kept as a
+// plain container of repeatable tasks.
+export function isTracked(goal: GoalDef): boolean {
+  return goal.tracked !== false
+}
+
 // A goal repeatable tasks can be tagged to: the plain "linked" goals, and "each" goals,
 // which are met when every repeatable task tagged to them has been done.
 export function isTemplateLinkable(goal: GoalDef): boolean {
@@ -81,7 +87,7 @@ export function eachNeed(template: QuickWin): EachNeed {
 
 // The tagged repeatable tasks of an "each" goal: how far each got in the period starting at
 // `periodStart` (taps or minutes), what it needs, and whether that is enough.
-export type EachStep = { id: string; title: string; count: number; need: number; unit: 'taps' | 'minutes'; done: boolean }
+export type EachStep = { id: string; title: string; areas: Area[]; count: number; need: number; unit: 'taps' | 'minutes'; done: boolean }
 
 export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): EachStep[] {
   const start = periodStart.getTime()
@@ -94,7 +100,7 @@ export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): Each
       unit === 'taps'
         ? mine.length
         : data.timeEntries.filter((e) => e.winId !== undefined && mine.includes(e.winId)).reduce((sum, e) => sum + e.minutes, 0)
-    return { id: q.id, title: q.title, count, need, unit, done: count >= need }
+    return { id: q.id, title: q.title, areas: q.areas, count, need, unit, done: count >= need }
   })
 }
 
@@ -321,6 +327,7 @@ export function formatMinutes(minutes: number): string {
 // How Today words a goal's progress: never "0 of 3". Until something is done it is just what is
 // asked ("3h", "5", "2 goals"); after that "45m of 3h", "1 of 5", "1 of 2 goals met".
 export function todayLabel(goal: GoalDef, p: GoalProgress): string {
+  if (!isTracked(goal)) return '' // a container has nothing to measure
   if (goal.childIds) {
     if (p.done === 0) return `${p.target} ${p.target === 1 ? 'goal' : 'goals'}`
     return `${p.done} of ${p.target} goals met`

@@ -1,7 +1,7 @@
 // What Today's area rings show: for each area switched on, the goals in it and how far along
 // they are. Pure: data in, cards out.
 import { colourFor, NEUTRAL_COLOUR } from './areas'
-import { eachSteps, goalSource, isActive, periodStartFor, progressFor, type EachStep } from './goals'
+import { eachSteps, goalSource, isActive, isTracked, periodStartFor, progressFor, type EachStep } from './goals'
 import type { AppData, GoalDef, GoalProgress } from './types'
 
 export type AreaGoal = { goal: GoalDef; progress: GoalProgress; steps?: EachStep[] }
@@ -39,7 +39,7 @@ export function ringCentre(met: number, total: number): string {
 }
 
 export function areaCards(data: AppData, now: Date): AreaCard[] {
-  const leaf = data.goals.filter((g) => !g.childIds && isActive(g))
+  const leaf = data.goals.filter((g) => !g.childIds && isActive(g) && isTracked(g)) // containers feed no ring
   const entry = (goal: GoalDef): AreaGoal => {
     const start = periodStartFor(goal.period, now)
     return {
@@ -70,8 +70,13 @@ export function areaCards(data: AppData, now: Date): AreaCard[] {
 // A goal's colour on Today: that of the first of its areas that exists, else neutral grey.
 // (Colour is the only sign of the area on a goal row; the rings carry the names.)
 export function goalColourFor(areas: AppData['areas'], goal: GoalDef): string {
-  const area = goal.areas.map((id) => areas.find((a) => a.id === id)).find((a) => a !== undefined)
-  return area ? colourFor(areas, area.id) : NEUTRAL_COLOUR
+  return areasColour(areas, goal.areas) ?? NEUTRAL_COLOUR
+}
+
+// The colour of the first of these areas that exists, or null if none does.
+export function areasColour(areas: AppData['areas'], ids: string[]): string | null {
+  const area = ids.map((id) => areas.find((a) => a.id === id)).find((a) => a !== undefined)
+  return area ? colourFor(areas, area.id) : null
 }
 
 // Every active goal for the period, whether or not its area has a ring (or has any area at all).

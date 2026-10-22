@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { positiveNumber } from '../limits'
-import { PERIOD_WORDS, currentTarget, formatMinutes, isActive, withTarget } from '../goals'
+import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, isTracked, withTarget } from '../goals'
 import type { Area, GoalDef, GoalPeriod, GoalSource } from '../types'
 import { AreaChips } from './AreaChips'
 
-type GoalType = 'time' | 'count' | 'amount' | 'overarching'
+type GoalType = 'time' | 'count' | 'amount' | 'routine' | 'overarching'
 
 type Props = {
   initial?: GoalDef // present = editing
@@ -14,7 +14,9 @@ type Props = {
 }
 
 function typeOf(goal: GoalDef): GoalType {
-  return goal.childIds ? 'overarching' : (goal.kind as 'time' | 'count' | 'amount')
+  if (goal.childIds) return 'overarching'
+  if (goalSource(goal) === 'each') return 'routine' // stored as a count goal that counts its tagged tasks
+  return goal.kind as 'time' | 'count' | 'amount'
 }
 
 // Title, areas, target and included goals can all be edited. The type (time vs
@@ -29,6 +31,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
   const [period, setPeriod] = useState<GoalPeriod>(initial?.period ?? 'week')
   const [source, setSource] = useState<GoalSource>(initial?.source ?? 'linked')
   const [areas, setAreas] = useState<Area[]>(initial?.areas ?? [])
+  const [tracked, setTracked] = useState(initial ? isTracked(initial) : true) // routines only
   const [backfill, setBackfill] = useState(false)
   const [amount, setAmount] = useState(() => {
     if (!initial || initial.childIds) return ''
@@ -38,9 +41,9 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
   const [childIds, setChildIds] = useState<string[]>(initial?.childIds ?? [])
 
   // An overarching goal can only include goals that repeat on the same schedule as it.
-  const candidates = allGoals.filter((g) => !g.childIds && g.id !== initial?.id && isActive(g) && g.period === period)
+  const candidates = allGoals.filter((g) => !g.childIds && g.id !== initial?.id && isActive(g) && isTracked(g) && g.period === period)
   const parsed = positiveNumber(amount) ?? 0 // 0 means "not a usable number"
-  const eachRule = type === 'count' && source === 'each' // the target is however many tasks are tagged
+  const eachRule = type === 'routine' // the target is however many tasks are tagged
   const valid =
     title.trim() !== '' &&
     (type === 'overarching' ? childIds.length > 0 : eachRule || parsed > 0)
@@ -72,14 +75,16 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
 
     // Time targets are typed in hours but stored as minutes.
     const target = eachRule ? 0 : type === 'time' ? Math.round(parsed * 60) : Math.round(parsed) // the real number is set from the tagged tasks
-    const base: GoalDef = initial ?? { id: crypto.randomUUID(), title: '', areas: [], kind: type, period, targets: [] }
+    const base: GoalDef = initial ?? { id: crypto.randomUUID(), title: '', areas: [], kind: type === 'routine' ? 'count' : type, period, targets: [] }
     // 'linked' is the default and is stored as no value at all. Amount goals always count linked wins.
-    const rule: GoalSource = type === 'count' || type === 'time' ? source : 'linked'
+    // A routine is a count goal that counts its tagged tasks; one kept as a container has no areas.
+    const rule: GoalSource = type === 'routine' ? 'each' : type === 'count' || type === 'time' ? source : 'linked'
     const updated: GoalDef = {
       ...base,
       title: title.trim(),
-      areas,
+      areas: type === 'routine' && !tracked ? [] : areas,
       source: rule === 'linked' ? undefined : rule,
+      tracked: type === 'routine' && !tracked ? false : undefined,
     }
     // Only changed when the target differs, so unrelated edits don't add history rows.
     const unchanged = initial && currentTarget(initial, now) === target
@@ -104,6 +109,7 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
           <option value="time">Time</option>
           <option value="count">Count</option>
           <option value="amount">Amount (adds up a number, like 100)</option>
+          <option value="routine">Routine (repeatable tasks)</option>
           <option value="overarching">Overarching (all its goals met)</option>
         </select>
         <select
@@ -136,7 +142,6 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
                 <option value="any">Anything I finish</option>
                 <option value="todo">To-dos I finish</option>
                 <option value="quick">Repeatable tasks I tap</option>
-                <option value="each">Each repeatable task I tag to it, once</option>
               </>
             ) : (
               <>
@@ -149,11 +154,20 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
         </label>
       )}
 
-      <AreaChips value={areas} onToggle={toggleArea} label="Areas (label and colour)" />
+      {eachRule && (
+        <label className="check-row">
+          <input type="checkbox" checked={tracked} onChange={(e) => setTracked(e.target.checked)} />
+          Track this routine
+        </label>
+      )}
+      {(!eachRule || tracked) && <AreaChips value={areas} onToggle={toggleArea} label="Areas (label and colour)" />}
 
       {eachRule && (
         <p className="muted">
-          Met when every repeatable task tagged to it has been done once {PERIOD_WORDS[period].per.replace('per ', 'each ')}. Tag them in Manage under Repeatable tasks.
+          {tracked
+            ? `Counts toward its areas. Met when every repeatable task tagged to it has had what it needs ${PERIOD_WORDS[period].per.replace('per ', 'each ')}.`
+            : 'Just a container: it groups its repeatable tasks on Today. It is not counted toward any area, goal or history.'}{' '}
+          Tag the tasks in Manage under Repeatable tasks.
         </p>
       )}
 

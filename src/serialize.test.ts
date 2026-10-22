@@ -299,3 +299,17 @@ describe('the Other ring switch', () => {
     expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
   })
 })
+
+describe('a container routine', () => {
+  it('round-trips tracked: false on a routine, and rejects it anywhere else', () => {
+    const box = { ...workouts, source: 'each' as const, tracked: false as const }
+    expect(deserialize(serialize({ ...sample, goals: [box] })).goals[0].tracked).toBe(false)
+    expect(deserialize(serialize({ ...sample, goals: [workouts] })).goals[0].tracked).toBeUndefined()
+    const raw = JSON.parse(serialize({ ...sample, goals: [workouts] }))
+    raw.goals[0].tracked = false // not a routine
+    expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
+    raw.goals[0].source = 'each'
+    raw.goals[0].tracked = true // only false is ever stored
+    expect(() => deserialize(JSON.stringify(raw))).toThrow(/damaged/)
+  })
+})

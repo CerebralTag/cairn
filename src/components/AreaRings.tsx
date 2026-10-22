@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { PERIOD_WORDS, formatMinutes, todayLabel } from '../goals'
-import { areaCards, goalColourFor, goalDisplay, ringCentre, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
+import { PERIOD_WORDS, formatMinutes, isTracked, todayLabel } from '../goals'
+import { areaCards, areasColour, goalColourFor, goalDisplay, ringCentre, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
 import { goalTapAction } from '../goalTap'
 import type { AppData, GoalDef, GoalProgress } from '../types'
 
@@ -96,15 +96,18 @@ function GoalRow({
   onLogTask,
   onUnlogTask,
   onTapGoal,
+  taskColour,
 }: {
   item: AreaGoal
   colour: string
+  taskColour?: (areas: string[]) => string | null // a Routine's tasks keep their own area colour
   onLogTask?: (quickWinId: string) => void
   onUnlogTask?: (goal: GoalDef, quickWinId: string) => void
   onTapGoal?: (goal: GoalDef, progress: GoalProgress) => void
 }) {
   const { goal, progress, steps } = item
   const display = goalDisplay(goal, progress)
+  const tracked = isTracked(goal) // a container routine shows just its name and tasks
   // A goal that counts by tapping is a button on its name line (not on the Chores-style bubbles,
   // which have their own taps); the rest of the row stays as it was.
   const tappable = onTapGoal !== undefined && goalTapAction(goal, progress) !== null
@@ -135,20 +138,20 @@ function GoalRow({
       {tappable ? (
         <button className="goal-row-head goal-row-tap" onClick={tap} aria-label={`Log ${goal.title}`}>
           <span>
-            <span className="goal-row-title">{goal.title}</span> <span className="muted period">{PERIOD_WORDS[goal.period].this}</span>
+            <span className="goal-row-title">{goal.title}</span> {tracked && <span className="muted period">{PERIOD_WORDS[goal.period].this}</span>}
           </span>
           <span className="muted nowrap">
-            {progress.met ? '✓ ' : ''}
+            {progress.met && tracked ? '✓ ' : ''}
             {label}
           </span>
         </button>
       ) : (
         <div className="goal-row-head">
           <span>
-            <span className="goal-row-title">{goal.title}</span> <span className="muted period">{PERIOD_WORDS[goal.period].this}</span>
+            <span className="goal-row-title">{goal.title}</span> {tracked && <span className="muted period">{PERIOD_WORDS[goal.period].this}</span>}
           </span>
           <span className="muted nowrap">
-            {progress.met ? '✓ ' : ''}
+            {progress.met && tracked ? '✓ ' : ''}
             {label}
           </span>
         </div>
@@ -170,7 +173,7 @@ function GoalRow({
           {(steps ?? []).map((s) => {
             const inner = (
               <>
-                <StepBubble step={s} colour={colour} />
+                <StepBubble step={s} colour={taskColour?.(s.areas) ?? colour} />
                 <span className="step-name">
                   <span className="sr-only">{s.done ? 'Done: ' : 'Not yet: '}</span>
                   {s.title}
@@ -223,6 +226,7 @@ export function AreaRings({ data, now, onLogTask, onUnlogTask, onTapGoal }: Ring
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const picked = cards.find((c) => c.key === pickedKey) // a ring that has since gone means "all"
   const everything = todayGoals(data, now)
+  const taskColour = (areas: string[]) => areasColour(data.areas, areas)
 
   return (
     <div className="area-rings">
@@ -241,7 +245,7 @@ export function AreaRings({ data, now, onLogTask, onUnlogTask, onTapGoal }: Ring
       <div className="area-goals" aria-label={picked ? `${picked.name} goals` : 'Goals'}>
         {picked
           ? picked.goals.map((item) => <GoalRow key={item.goal.id} item={item} colour={picked.colour} onLogTask={onLogTask} onUnlogTask={onUnlogTask} onTapGoal={onTapGoal} />)
-          : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} onLogTask={onLogTask} onUnlogTask={onUnlogTask} onTapGoal={onTapGoal} />)}
+          : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} onLogTask={onLogTask} onUnlogTask={onUnlogTask} onTapGoal={onTapGoal} taskColour={taskColour} />)}
         {picked && picked.total === 0 && <p className="muted">Nothing in {picked.name} yet.</p>}
       </div>
     </div>

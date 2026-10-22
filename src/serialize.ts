@@ -145,7 +145,9 @@ function validGoal(g: unknown): boolean {
     optional(g.childIds, isStringArray) &&
     optional(g.archivedAt, validDate) &&
     optional(g.source, (s) => isString(s) && SOURCES.includes(s)) &&
-    sourceFitsKind(g.kind, g.source)
+    sourceFitsKind(g.kind, g.source) &&
+    optional(g.tracked, (v) => v === false) &&
+    (g.tracked === undefined || g.tracked === null || g.source === 'each')
   )
 }
 

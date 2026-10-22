@@ -347,3 +347,12 @@ describe('taking a tap back', () => {
     expect(removeTap(t.data, 'nope', 'd', START, END)).toBeNull()
   })
 })
+
+describe('a container routine in the toast', () => {
+  it('does not add a progress line, since it counts toward nothing', () => {
+    const box: GoalDef = { id: 'box', title: 'Evening', areas: [], kind: 'count', period: 'week', source: 'each', tracked: false, targets: [{ from: SINCE, amount: 1 }] }
+    const t: QuickWin = { id: 't', title: 'Dishes', areas: [], goalIds: ['box'], uses: 0 }
+    const r = applyQuickWin(data([box], [], [], [], [t]), 't', WED)!
+    expect(contributionsFor(r.data, r.winId, WED)).toEqual([])
+  })
+})

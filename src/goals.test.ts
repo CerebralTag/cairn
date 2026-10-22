@@ -10,6 +10,7 @@ import {
   isTemplateLinkable,
   syncEachGoals,
   eachNeed,
+  isTracked,
   todayLabel,
   eachSteps,
   taggedTemplates,
@@ -564,5 +565,14 @@ describe('todayLabel', () => {
   it('never prints a zero of anything, and is blank when nothing is asked', () => {
     expect(todayLabel(workouts, p(0, 0))).toBe('')
     expect(todayLabel(guitar, p(0, 120))).not.toMatch(/\b0/)
+  })
+})
+
+describe('tracked and container routines', () => {
+  const routine: GoalDef = { id: 'r', title: 'R', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 1 }] }
+  it('is tracked unless marked false, and a container says nothing of progress', () => {
+    expect(isTracked(routine)).toBe(true)
+    expect(isTracked({ ...routine, tracked: false })).toBe(false)
+    expect(todayLabel({ ...routine, tracked: false }, { done: 1, target: 2, fraction: 0.5, met: false })).toBe('')
   })
 })
