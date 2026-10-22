@@ -31,6 +31,13 @@ export function goalDisplay(goal: GoalDef, progress: GoalProgress): GoalDisplay 
   return 'bar'
 }
 
+// What the middle of an area's ring says: the number of goals while none is met ("2"), "1/2" once
+// some are, and ✓ when all are (an area with no goals owes nothing, so that is a ✓ too).
+export function ringCentre(met: number, total: number): string {
+  if (total === 0 || met >= total) return '✓'
+  return met === 0 ? String(total) : `${met}/${total}`
+}
+
 export function areaCards(data: AppData, now: Date): AreaCard[] {
   const leaf = data.goals.filter((g) => !g.childIds && isActive(g))
   const entry = (goal: GoalDef): AreaGoal => {

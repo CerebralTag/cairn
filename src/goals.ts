@@ -318,6 +318,18 @@ export function formatMinutes(minutes: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
+// How Today words a goal's progress: never "0 of 3". Until something is done it is just what is
+// asked ("3h", "5", "2 goals"); after that "45m of 3h", "1 of 5", "1 of 2 goals met".
+export function todayLabel(goal: GoalDef, p: GoalProgress): string {
+  if (goal.childIds) {
+    if (p.done === 0) return `${p.target} ${p.target === 1 ? 'goal' : 'goals'}`
+    return `${p.done} of ${p.target} goals met`
+  }
+  if (p.target === 0) return '' // nothing to ask yet (e.g. a Chores goal with no tasks tagged)
+  const show = (n: number) => (goal.kind === 'time' ? formatMinutes(n) : String(n))
+  return p.done === 0 ? show(p.target) : `${show(p.done)} of ${show(p.target)}`
+}
+
 export function progressLabel(goal: GoalDef, p: GoalProgress): string {
   if (goal.childIds) return `${p.done} of ${p.target} goals met`
   if (goal.kind === 'time') return `${formatMinutes(p.done)} of ${formatMinutes(p.target)}`

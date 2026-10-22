@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { PERIOD_WORDS, formatMinutes, progressLabel } from '../goals'
-import { areaCards, goalColourFor, goalDisplay, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
+import { PERIOD_WORDS, formatMinutes, todayLabel } from '../goals'
+import { areaCards, goalColourFor, goalDisplay, ringCentre, todayGoals, type AreaCard, type AreaGoal } from '../todayAreas'
 import { goalTapAction } from '../goalTap'
 import type { AppData, GoalDef, GoalProgress } from '../types'
 
@@ -15,7 +15,7 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
     <button
       className={selected ? 'area-ring on' : 'area-ring'}
       aria-pressed={selected}
-      aria-label={`${card.name}, ${card.met} of ${card.total} done`}
+      aria-label={card.total === 0 ? `${card.name}, nothing to do` : card.met === 0 ? `${card.name}, ${card.total} ${card.total === 1 ? 'goal' : 'goals'}` : `${card.name}, ${card.met} of ${card.total} goals met`}
       onClick={onSelect}
     >
       <svg viewBox="0 0 72 72" className="area-ring-dial" aria-hidden="true">
@@ -35,7 +35,7 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
           />
         )}
         <text x="36" y="41" textAnchor="middle" fontSize="15" fontWeight="700" fill="var(--color-text)">
-          {`${card.met}/${card.total}`}
+          {ringCentre(card.met, card.total)}
         </text>
       </svg>
       <span className="area-ring-name">{card.name}</span>
@@ -128,7 +128,7 @@ function GoalRow({
       </div>
     )
   }
-  const label = display === 'steps' ? `${progress.done} of ${progress.target}` : progressLabel(goal, progress)
+  const label = todayLabel(goal, progress)
 
   return (
     <div className="goal-row">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OTHER_KEY, areaCards, goalColourFor, goalDisplay, todayGoals } from './todayAreas'
+import { OTHER_KEY, areaCards, goalColourFor, goalDisplay, ringCentre, todayGoals } from './todayAreas'
 import { eachSteps } from './goals'
 import { SINCE, data, doneWin, guitar, session, squats, todo, workouts } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
@@ -137,5 +137,19 @@ describe('goalColourFor', () => {
     const areas = withAreas(data([])).areas
     expect(goalColourFor(areas, { ...guitar, areas: ['gone', 'health'] })).toBe('var(--palette-2)')
     expect(goalColourFor(areas, { ...guitar, areas: [] })).toBe('var(--color-bead-neutral)')
+  })
+})
+
+describe('ringCentre', () => {
+  it('shows the number of goals until one is met, then met/total, then a tick', () => {
+    expect(ringCentre(0, 2)).toBe('2')
+    expect(ringCentre(0, 1)).toBe('1')
+    expect(ringCentre(1, 2)).toBe('1/2')
+    expect(ringCentre(1, 1)).toBe('✓')
+    expect(ringCentre(2, 2)).toBe('✓')
+  })
+  it('never shows a zero: an area with no goals owes nothing', () => {
+    expect(ringCentre(0, 0)).toBe('✓')
+    for (const [m, t] of [[0, 1], [0, 3], [1, 3], [3, 3], [0, 0]]) expect(ringCentre(m, t)).not.toMatch(/0/)
   })
 })

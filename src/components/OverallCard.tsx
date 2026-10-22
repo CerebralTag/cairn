@@ -1,5 +1,5 @@
 import { useAreas } from '../areasContext'
-import { PERIOD_WORDS, childrenFor, periodStartFor, progressFor, progressLabel } from '../goals'
+import { PERIOD_WORDS, childrenFor, periodStartFor, progressFor, todayLabel } from '../goals'
 import type { AppData, GoalDef } from '../types'
 
 // An overarching goal: one segment per child goal, each filled by that child's own
@@ -17,14 +17,14 @@ export function OverallCard({ goal, data, now }: { goal: GoalDef; data: AppData;
         <strong>{goal.title}</strong>
         <span className="muted">
           {progress.met ? '✓ ' : ''}
-          {progressLabel(goal, progress)} · {PERIOD_WORDS[goal.period].this}
+          {todayLabel(goal, progress)} · {PERIOD_WORDS[goal.period].this}
         </span>
       </div>
       <div className="segments" role="img" aria-label={`${Math.round(progress.fraction * 100)}% overall`}>
         {children.map((child) => {
           const p = progressFor(child, data, start)
           return (
-            <span key={child.id} className="segment" title={`${child.title}: ${progressLabel(child, p)}`}>
+            <span key={child.id} className="segment" title={`${child.title}: ${todayLabel(child, p)}`}>
               <span className="segment-fill" style={{ width: `${p.fraction * 100}%`, background: goalColour(child) }} />
             </span>
           )

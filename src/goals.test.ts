@@ -10,6 +10,7 @@ import {
   isTemplateLinkable,
   syncEachGoals,
   eachNeed,
+  todayLabel,
   eachSteps,
   taggedTemplates,
   linkByArea,
@@ -545,5 +546,23 @@ describe('each goals follow what each task itself needs', () => {
     const gone = { ...d, quickWins: [litter, reading] }
     expect(progressFor(chores, gone, MON).done).toBe(1)
     expect(syncEachGoals({ ...base, goals: [{ ...chores, targets: [] }] }, MON).goals[0].targets.at(-1)?.amount).toBe(3)
+  })
+})
+
+describe('todayLabel', () => {
+  const p = (done: number, target: number) => ({ done, target, fraction: 0, met: false })
+  it('says only what is asked until something is done', () => {
+    expect(todayLabel(guitar, p(0, 120))).toBe('2h')
+    expect(todayLabel(workouts, p(0, 4))).toBe('4')
+    expect(todayLabel({ id: 'o', title: 'O', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['a'] }, p(0, 2))).toBe('2 goals')
+  })
+  it('then shows progress against it', () => {
+    expect(todayLabel(guitar, p(45, 120))).toBe('45m of 2h')
+    expect(todayLabel(workouts, p(1, 4))).toBe('1 of 4')
+    expect(todayLabel({ id: 'o', title: 'O', areas: [], kind: 'completion', period: 'week', targets: [], childIds: ['a'] }, p(1, 2))).toBe('1 of 2 goals met')
+  })
+  it('never prints a zero of anything, and is blank when nothing is asked', () => {
+    expect(todayLabel(workouts, p(0, 0))).toBe('')
+    expect(todayLabel(guitar, p(0, 120))).not.toMatch(/\b0/)
   })
 })
