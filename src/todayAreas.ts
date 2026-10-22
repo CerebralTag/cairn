@@ -6,18 +6,14 @@ import type { AppData, GoalDef, GoalProgress } from './types'
 
 export type AreaGoal = { goal: GoalDef; progress: GoalProgress; steps?: EachStep[] }
 
-// A to-do assigned to the area: just its name, with a ✓ once it is done.
-export type AreaTask = { id: string; title: string; done: boolean }
-
 export type AreaCard = {
   key: string // the area's id, or OTHER_KEY for goals with no area
   name: string
   colour: string // a CSS colour for the ring and bars
   goals: AreaGoal[]
-  tasks: AreaTask[]
-  total: number // goals + tasks in the area
-  met: number // goals met + tasks done
-  fraction: number // average progress across them (0..1); an empty area counts as complete
+  total: number // goals in the area (to-dos are not counted)
+  met: number // goals met
+  fraction: number // average progress of the goals (0..1); an area with none counts as complete
 }
 
 export const OTHER_KEY = '__other'
@@ -45,33 +41,17 @@ export function areaCards(data: AppData, now: Date): AreaCard[] {
       steps: goalSource(goal) === 'each' ? eachSteps(goal, data, start) : undefined,
     }
   }
-  const card = (key: string, name: string, colour: string, goals: GoalDef[], tasks: AreaTask[] = []): AreaCard => {
+  const card = (key: string, name: string, colour: string, goals: GoalDef[]): AreaCard => {
     const items = goals.map(entry)
-    const total = items.length + tasks.length
-    const met = items.filter((i) => i.progress.met).length + tasks.filter((t) => t.done).length
-    const sum = items.reduce((s, i) => s + i.progress.fraction, 0) + tasks.filter((t) => t.done).length
+    const met = items.filter((i) => i.progress.met).length
     // Nothing assigned means nothing left to do: the ring is full and reads 0/0.
-    return { key, name, colour, goals: items, tasks, total, met, fraction: total === 0 ? 1 : sum / total }
+    return { key, name, colour, goals: items, total: items.length, met, fraction: items.length === 0 ? 1 : items.reduce((sum, i) => sum + i.progress.fraction, 0) / items.length }
   }
-
-  // To-dos assigned to an area: those still open, and those finished this week.
-  const weekStart = periodStartFor('week', now).getTime()
-  const tasksIn = (areaId: string): AreaTask[] =>
-    data.wins
-      .filter(
-        (w) =>
-          w.origin === 'todo' &&
-          w.areas.includes(areaId) &&
-          (w.status === 'todo' || w.status === 'doing' || (w.status === 'done' && (w.completedAt?.getTime() ?? 0) >= weekStart)),
-      )
-      .map((w) => ({ id: w.id, title: w.title, done: w.status === 'done' }))
 
   // Every area switched on gets a ring. A goal sits under every area it is labelled with.
   const cards = data.areas
     .filter((a) => a.onToday !== false)
-    .map((a) =>
-      card(a.id, a.name, colourFor(data.areas, a.id), leaf.filter((g) => g.areas.includes(a.id)), tasksIn(a.id)),
-    )
+    .map((a) => card(a.id, a.name, colourFor(data.areas, a.id), leaf.filter((g) => g.areas.includes(a.id))))
 
   // Goals with no area (or only areas that no longer exist) are kept together so none vanish.
   const known = new Set(data.areas.map((a) => a.id))

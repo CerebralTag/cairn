@@ -242,14 +242,6 @@ export function AreaRings({ data, now, onLogTask, onUnlogTask, onTapGoal }: Ring
         {picked
           ? picked.goals.map((item) => <GoalRow key={item.goal.id} item={item} colour={picked.colour} onLogTask={onLogTask} onUnlogTask={onUnlogTask} onTapGoal={onTapGoal} />)
           : everything.map((item) => <GoalRow key={item.goal.id} item={item} colour={goalColourFor(data.areas, item.goal)} onLogTask={onLogTask} onUnlogTask={onUnlogTask} onTapGoal={onTapGoal} />)}
-        {picked?.tasks.map((t) => (
-          <div key={t.id} className="goal-row">
-            <div className="goal-row-head">
-              <span className="goal-row-title">{t.title}</span>
-              {t.done && <Bubble on colour={picked.colour} />}
-            </div>
-          </div>
-        ))}
         {picked && picked.total === 0 && <p className="muted">Nothing in {picked.name} yet.</p>}
       </div>
     </div>

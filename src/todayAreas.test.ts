@@ -39,22 +39,15 @@ describe('areaCards', () => {
 
   it('an area with nothing assigned is complete and reads 0/0', () => {
     const [music] = areaCards(withAreas(data([])), WED)
-    expect(music).toMatchObject({ total: 0, met: 0, fraction: 1, goals: [], tasks: [] })
+    expect(music).toMatchObject({ total: 0, met: 0, fraction: 1, goals: [] })
   })
 
-  it('counts to-dos assigned to the area: open ones are not done, ones finished this week are', () => {
-    const open = todo({ id: 'a', title: 'Fix shelf', areas: ['music'] })
+  it('counts only goals: to-dos assigned to the area do not change its ring', () => {
+    const open = { ...todo({ id: 'a', title: 'Fix shelf', areas: ['music'] }), origin: 'todo' as const }
     const done = { ...doneWin(WED, { id: 'b', title: 'Tune up', areas: ['music'] }), origin: 'todo' as const }
-    const old = { ...doneWin(new Date(2026, 9, 1), { id: 'c', areas: ['music'] }), origin: 'todo' as const }
-    const dropped = { ...todo({ id: 'd', areas: ['music'] }), status: 'dropped' as const }
-    const other = todo({ id: 'e', areas: ['health'] })
-    const d = withAreas(data([], [{ ...open, origin: 'todo' as const }, done, old, dropped, { ...other, origin: 'todo' as const }]))
-    const [music] = areaCards(d, WED)
-    expect(music.tasks).toEqual([
-      { id: 'a', title: 'Fix shelf', done: false },
-      { id: 'b', title: 'Tune up', done: true },
-    ])
-    expect(music).toMatchObject({ total: 2, met: 1, fraction: 0.5 })
+    const [music] = areaCards(withAreas(data([], [open, done])), WED)
+    expect(music).toMatchObject({ total: 0, met: 0, fraction: 1, goals: [] })
+    expect('tasks' in music).toBe(false)
   })
 
   it('shows a goal under every area it is labelled with', () => {
