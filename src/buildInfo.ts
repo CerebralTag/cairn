@@ -8,6 +8,9 @@ export type BuildInfo = { version: string; builtAt: string }
 
 export const BUILD_INFO: BuildInfo = __BUILD_INFO__
 
+// Added to the address by "Update" so the page is fetched fresh; removed again once loaded.
+export const UPDATE_PARAM = 'fresh'
+
 export const isDirty = (info: BuildInfo): boolean => info.version.endsWith('-dirty')
 
 export type UpdateCheck = { state: 'current' } | { state: 'newer'; version: string } | { state: 'unknown'; reason: string }
@@ -70,6 +73,10 @@ export async function refreshApp(): Promise<string | null> {
   } catch {
     // The reload below still tries the network.
   }
-  window.location.reload()
+  // Open the app at a new address: a browser can't answer that from a saved copy, so the page, and
+  // every file it names, comes fresh from the server. (main.tsx tidies the address afterwards.)
+  const url = new URL(window.location.href)
+  url.searchParams.set(UPDATE_PARAM, String(Date.now()))
+  window.location.replace(url.toString())
   return null
 }

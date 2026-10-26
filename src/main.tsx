@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { UPDATE_PARAM } from './buildInfo'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,4 +21,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       // Not fatal: the app just won't work offline.
     })
   })
+}
+
+// Drop the cache-busting address "Update" used, so the address bar and bookmarks stay clean.
+const here = new URL(window.location.href)
+if (here.searchParams.has(UPDATE_PARAM)) {
+  here.searchParams.delete(UPDATE_PARAM)
+  window.history.replaceState(null, '', here.pathname + here.search + here.hash)
 }
