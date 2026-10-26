@@ -1,7 +1,7 @@
 // What Today's area rings show: for each area switched on, the goals in it and how far along
 // they are. Pure: data in, cards out.
 import { colourFor, NEUTRAL_COLOUR } from './areas'
-import { eachSteps, entryAreas, entryGoalIds, goalSource, isActive, isTracked, periodStartFor, progressFor, winAreas, winsById, type EachStep } from './goals'
+import { countsToward, eachSteps, entryAreas, entryGoalIds, goalSource, isActive, isTracked, periodStartFor, progressFor, winAreas, winsById, type EachStep } from './goals'
 import { doneWinsInRange, timeInRange, weekRange } from './reports'
 import type { AppData, GoalDef, GoalProgress } from './types'
 
@@ -51,18 +51,19 @@ export function areaExtra(data: AppData, areaId: string, goalsInArea: GoalDef[],
   const range = weekRange(now)
   const inGoal = new Set(goalsInArea.map((g) => g.id))
   const byId = winsById(data.wins)
-  // A goal that counts "anything" already counts everything, so nothing in the area is left over.
+  // A goal that counts "anything" already counts all the time; and a win is not extra if any count
+  // goal of the area counts it, by a tag or by its rule (to-dos finished, repeatable tasks tapped...).
   const takesAllTime = goalsInArea.some((g) => g.kind === 'time' && goalSource(g) === 'any')
-  const takesAllWins = goalsInArea.some((g) => g.kind !== 'time' && goalSource(g) === 'any')
+  const countGoals = goalsInArea.filter((g) => g.kind !== 'time')
 
   const minutes = takesAllTime
     ? 0
     : timeInRange(data.timeEntries, range)
         .filter((e) => entryAreas(e, byId, data.goals).includes(areaId) && !entryGoalIds(e, byId).some((id) => inGoal.has(id)))
         .reduce((sum, e) => sum + e.minutes, 0)
-  const items = takesAllWins
-    ? 0
-    : doneWinsInRange(data.wins, range).filter((w) => winAreas(w, data.goals).includes(areaId) && !w.goalIds.some((id) => inGoal.has(id))).length
+  const items = doneWinsInRange(data.wins, range).filter(
+    (w) => winAreas(w, data.goals).includes(areaId) && !w.goalIds.some((id) => inGoal.has(id)) && !countGoals.some((g) => countsToward(g, w)),
+  ).length
 
   const share = goalsInArea.length > 0 ? 1 / goalsInArea.length : NO_GOALS_SHARE
   return { laps: minutes / EXTRA_LAP_MINUTES + items * share, minutes, items }

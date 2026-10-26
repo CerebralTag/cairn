@@ -221,6 +221,16 @@ describe('the outer ring: extra effort in an area outside its goals', () => {
     expect(extra(data([anyCount], [doneWin(new Date(2026, 9, 13, 9), { areas: ['music'] })]), [anyCount]).items).toBe(0)
   })
 
+  it('does not count a win that a rule goal of the area already counts', () => {
+    const todoGoal: GoalDef = { ...workouts, id: 'gt', areas: ['music'], source: 'todo' }
+    const quickGoal: GoalDef = { ...workouts, id: 'gq', areas: ['music'], source: 'quick' }
+    const todoWin = { ...doneWin(new Date(2026, 9, 13, 9), { areas: ['music'] }), origin: 'todo' as const }
+    const quickWin = { ...doneWin(new Date(2026, 9, 13, 10), { areas: ['music'] }), origin: 'quick' as const }
+    const plain = doneWin(new Date(2026, 9, 13, 11), { areas: ['music'] }) // counted by neither rule
+    expect(extra(data([todoGoal], [todoWin, plain]), [todoGoal]).items).toBe(1) // only the plain one
+    expect(extra(data([quickGoal], [quickWin, plain]), [quickGoal]).items).toBe(1)
+  })
+
   it('shows up on the area card, and goals with no area never have any', () => {
     const d = { ...withAreas(data([goalA], [], [session(new Date(2026, 9, 13, 9), 120, { areas: ['music'] })])) }
     expect(areaCards(d, NOW).find((c) => c.key === 'music')?.extra).toBeCloseTo(0.5)
