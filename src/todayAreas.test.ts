@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OTHER_KEY, areaCards, areasColour, goalColourFor, goalDisplay, ringCentre, todayGoals } from './todayAreas'
+import { EXTRA_LAP_MINUTES, OTHER_KEY, areaCards, areaExtra, areasColour, goalColourFor, goalDisplay, ringCentre, todayGoals } from './todayAreas'
 import { eachSteps } from './goals'
 import { SINCE, data, doneWin, guitar, session, squats, todo, workouts } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
@@ -176,5 +176,55 @@ describe('areasColour', () => {
     expect(areasColour(areas, ['gone', 'health'])).toBe('var(--palette-2)')
     expect(areasColour(areas, [])).toBeNull()
     expect(areasColour(areas, ['gone'])).toBeNull()
+  })
+})
+
+describe('the outer ring: extra effort in an area outside its goals', () => {
+  const NOW = new Date(2026, 9, 14, 12)
+  const goalA: GoalDef = { ...guitar, id: 'ga', areas: ['music'] }
+  const goalB: GoalDef = { ...guitar, id: 'gb', areas: ['music'] }
+  const extra = (d: ReturnType<typeof data>, goals: GoalDef[]) => areaExtra(d, 'music', goals, NOW)
+
+  it('counts time in the area that no goal of it counted, at a lap per four hours', () => {
+    const d = data([goalA], [], [session(new Date(2026, 9, 13, 9), 60, { areas: ['music'] }), session(new Date(2026, 9, 13, 10), 120, { areas: ['music'], goalIds: ['ga'] })])
+    const e = extra(d, [goalA])
+    expect(e.minutes).toBe(60) // the 120 minutes counted toward its goal
+    expect(e.laps).toBeCloseTo(60 / EXTRA_LAP_MINUTES)
+  })
+
+  it('counts a finished win in the area outside its goals as a goal-sized share of the ring', () => {
+    const win = doneWin(new Date(2026, 9, 13, 9), { areas: ['music'] })
+    expect(extra(data([goalA, goalB], [win]), [goalA, goalB])).toMatchObject({ items: 1, laps: 0.5 }) // 1 of 2 goals
+    expect(extra(data([], [win]), [])).toMatchObject({ items: 1, laps: 0.25 }) // no goals: a quarter
+  })
+
+  it('leaves out what a goal in the area counted, other weeks, other areas, and unfinished tasks', () => {
+    const inGoal = doneWin(new Date(2026, 9, 13, 9), { areas: ['music'], goalIds: ['ga'] })
+    const lastWeek = doneWin(new Date(2026, 9, 6, 9), { areas: ['music'] })
+    const elsewhere = doneWin(new Date(2026, 9, 13, 9), { areas: ['health'] })
+    const open = todo({ areas: ['music'] })
+    expect(extra(data([goalA], [inGoal, lastWeek, elsewhere, open]), [goalA])).toMatchObject({ items: 0, minutes: 0, laps: 0 })
+  })
+
+  it('counts time on a task the same way: in its goal or not', () => {
+    const inside = { ...todo({ id: 't1', areas: ['music'], goalIds: ['ga'] }) }
+    const outside = todo({ id: 't2', areas: ['music'] })
+    const d = data([goalA], [inside, outside], [session(new Date(2026, 9, 13, 9), 30, { winId: 't1' }), session(new Date(2026, 9, 13, 10), 45, { winId: 't2' })])
+    expect(extra(d, [goalA]).minutes).toBe(45)
+  })
+
+  it('is nothing when a goal in the area counts anything', () => {
+    const anyTime: GoalDef = { ...goalA, source: 'any' }
+    const d = data([anyTime], [doneWin(new Date(2026, 9, 13, 9), { areas: ['music'] })], [session(new Date(2026, 9, 13, 9), 90, { areas: ['music'] })])
+    expect(extra(d, [anyTime]).minutes).toBe(0)
+    const anyCount: GoalDef = { ...workouts, id: 'gc', areas: ['music'], source: 'any' }
+    expect(extra(data([anyCount], [doneWin(new Date(2026, 9, 13, 9), { areas: ['music'] })]), [anyCount]).items).toBe(0)
+  })
+
+  it('shows up on the area card, and goals with no area never have any', () => {
+    const d = { ...withAreas(data([goalA], [], [session(new Date(2026, 9, 13, 9), 120, { areas: ['music'] })])) }
+    expect(areaCards(d, NOW).find((c) => c.key === 'music')?.extra).toBeCloseTo(0.5)
+    const loose: GoalDef = { ...squats, areas: [] }
+    expect(areaCards(withAreas(data([loose], [], [session(new Date(2026, 9, 13, 9), 120)])), NOW).find((c) => c.key === OTHER_KEY)?.extra).toBe(0)
   })
 })

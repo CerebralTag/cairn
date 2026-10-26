@@ -50,3 +50,11 @@ describe('beadCaption', () => {
     expect(caption(0, 0)).toBe('')
   })
 })
+
+describe('beadCaption for a longer stretch', () => {
+  it('words the stretch it is given', () => {
+    const summary = { wins: [{} as never, {} as never], minutes: 90 }
+    expect(beadCaption(summary, formatMinutes)).toBe('2 wins today · 1h 30m logged')
+    expect(beadCaption(summary, formatMinutes, 'this week')).toBe('2 wins this week · 1h 30m logged')
+  })
+})

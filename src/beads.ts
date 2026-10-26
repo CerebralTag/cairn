@@ -17,10 +17,11 @@ export function summariseToday(items: ActivityItem[]): BeadSummary {
   }
 }
 
-// "4 wins today · 1h 20m logged", or just the time if nothing was finished yet.
-export function beadCaption(summary: BeadSummary, formatMinutes: (m: number) => string): string {
+// "4 wins today · 1h 20m logged", or just the time if nothing was finished yet. `when` is the
+// stretch the items cover ("today", "this week").
+export function beadCaption(summary: BeadSummary, formatMinutes: (m: number) => string, when = 'today'): string {
   const parts: string[] = []
-  if (summary.wins.length > 0) parts.push(`${summary.wins.length} ${summary.wins.length === 1 ? 'win' : 'wins'} today`)
+  if (summary.wins.length > 0) parts.push(`${summary.wins.length} ${summary.wins.length === 1 ? 'win' : 'wins'} ${when}`)
   if (summary.minutes > 0) parts.push(`${formatMinutes(summary.minutes)} logged`)
   return parts.join(' · ')
 }

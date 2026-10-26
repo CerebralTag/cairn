@@ -5,20 +5,58 @@ import { goalTapAction } from '../goalTap'
 import type { AppData, GoalDef, GoalProgress } from '../types'
 
 const MAX_PER_ROW = 4 // more areas than this wrap onto a second row
-const RADIUS = 27
+const RADIUS = 23 // the goals ring
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+const OUTER_RADIUS = 31.5 // the thin outer ring for extra effort
+const OUTER_CIRCUMFERENCE = 2 * Math.PI * OUTER_RADIUS
 
-// An area's ring: filled by the average progress of its goals; the middle says how many are met.
+// An area's ring. The thick inner ring fills with the average progress of its goals; the middle says
+// how many are met. The thin outer ring is this week's extra: effort in the area that no goal of it
+// counted (time, finished tasks). A first lap is a light tint; going past a lap draws a second,
+// bolder lap in the full colour on top of the start. Nothing outer shows until there is some.
 function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: boolean; onSelect: () => void }) {
   const filled = card.fraction * CIRCUMFERENCE
+  const lap1 = Math.min(card.extra, 1) * OUTER_CIRCUMFERENCE
+  const lap2 = Math.min(Math.max(card.extra - 1, 0), 1) * OUTER_CIRCUMFERENCE
   return (
     <button
       className={selected ? 'area-ring on' : 'area-ring'}
       aria-pressed={selected}
-      aria-label={card.total === 0 ? `${card.name}, nothing to do` : card.met === 0 ? `${card.name}, ${card.total} ${card.total === 1 ? 'goal' : 'goals'}` : `${card.name}, ${card.met} of ${card.total} goals met`}
+      aria-label={`${
+        card.total === 0 ? `${card.name}, nothing to do` : card.met === 0 ? `${card.name}, ${card.total} ${card.total === 1 ? 'goal' : 'goals'}` : `${card.name}, ${card.met} of ${card.total} goals met`
+      }${card.extra > 0 ? ', plus extra effort this week' : ''}`}
       onClick={onSelect}
     >
       <svg viewBox="0 0 72 72" className="area-ring-dial" aria-hidden="true">
+        {card.extra > 0 && (
+          <>
+            <circle cx="36" cy="36" r={OUTER_RADIUS} fill="none" stroke="var(--color-ring-track)" strokeWidth="3.2" />
+            <circle
+              cx="36"
+              cy="36"
+              r={OUTER_RADIUS}
+              fill="none"
+              style={{ stroke: `color-mix(in srgb, ${card.colour} 40%, var(--color-surface))` }}
+              strokeWidth="3.2"
+              strokeLinecap="round"
+              strokeDasharray={`${lap1} ${OUTER_CIRCUMFERENCE}`}
+              transform="rotate(-90 36 36)"
+            />
+            {lap2 > 0 && (
+              <circle
+                cx="36"
+                cy="36"
+                r={OUTER_RADIUS}
+                fill="none"
+                stroke={card.colour}
+                strokeWidth="4.8"
+                strokeLinecap="round"
+                strokeDasharray={`${lap2} ${OUTER_CIRCUMFERENCE}`}
+                transform="rotate(-90 36 36)"
+              />
+            )}
+          </>
+        )}
         <circle cx="36" cy="36" r={RADIUS} fill="none" stroke="var(--color-ring-track)" strokeWidth="7" />
         {filled > 0 && (
           // A zero-length arc with round caps would still draw a dot, so skip it.
@@ -34,7 +72,7 @@ function AreaRing({ card, selected, onSelect }: { card: AreaCard; selected: bool
             transform="rotate(-90 36 36)"
           />
         )}
-        <text x="36" y="41" textAnchor="middle" fontSize="15" fontWeight="700" fill="var(--color-text)">
+        <text x="36" y="40.5" textAnchor="middle" fontSize="14" fontWeight="700" fill="var(--color-text)">
           {ringCentre(card.met, card.total)}
         </text>
       </svg>

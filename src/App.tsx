@@ -28,7 +28,7 @@ import { addLoggedWin, addTask, applyEntryEdit, applyWinEdit, deleteEntry, type 
 import { formatMinutes, isActive, linkByArea, periodEnd, periodStartFor, syncEachGoals } from './goals'
 import { archiveGoal, deleteWin, removeArea, removeGoal, restoreGoal, withStatus } from './manage'
 import { applyQuickWin, applyTemplateToWins, asksForMinutes, contributionsFor, removeTap, revertTemplateApplication, undoQuickWin } from './quickWins'
-import { activityFor, byArea, dayRange, weekRange } from './reports'
+import { activityFor, byArea, weekRange } from './reports'
 import { DATA_STORAGE_KEY, loadData, readRawData, requestPersistence, saveData } from './storage'
 import { deserialize } from './serialize'
 import { discardTimer, startTimer, stopTimer, type StopOptions } from './timer'
@@ -493,7 +493,8 @@ function App() {
   const overallGoals = data.goals.filter((g) => g.childIds && isActive(g))
   const leafGoals = data.goals.filter((g) => !g.childIds && isActive(g))
   const unfinished = data.wins.filter((w) => w.status === 'todo' || w.status === 'doing')
-  const todayItems = activityFor(data, dayRange(now))
+  // The screen is the week so far: wins and time accumulate through the week.
+  const todayItems = activityFor(data, weekRange(now))
   // Lets an entry be fixed right in Today's list (or from a bead), without a trip through History.
   const todayEditor: TodayEditor = {
     wins: data.wins,
@@ -511,7 +512,7 @@ function App() {
     <Providers data={data}>
       {noticeEl}
       <main className="home">
-        <h1>Today</h1>
+        <h1>This week</h1>
 
         {overallGoals.map((goal) => (
           <OverallCard key={goal.id} goal={goal} data={data} now={now} />
@@ -528,7 +529,7 @@ function App() {
               </button>
             </div>
           )}
-          <TodayBeads items={todayItems} onEdit={setEditingKey} />
+          <TodayBeads items={todayItems} onEdit={setEditingKey} when="this week" />
         </section>
 
         {data.timer && <TimerCard timer={data.timer} onStop={finishTimer} onDiscard={() => setData((d) => discardTimer(d))} />}
@@ -594,7 +595,7 @@ function App() {
         )}
 
         {/* No wins yet today: no section (an empty box feels like a to-do). */}
-        {todayItems.length > 0 && <TodayWins items={todayItems} editor={todayEditor} />}
+        {todayItems.length > 0 && <TodayWins items={todayItems} editor={todayEditor} title="This week's wins" showDay />}
         {/* This week's time by area, above the to-dos; nothing shows until some time is logged. */}
         <AreaTimeChart totals={byArea(data, weekRange(now))} title="Time by area · this week" hideWhenEmpty />
         <TodoList

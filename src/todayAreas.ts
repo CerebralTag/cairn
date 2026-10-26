@@ -1,7 +1,8 @@
 // What Today's area rings show: for each area switched on, the goals in it and how far along
 // they are. Pure: data in, cards out.
 import { colourFor, NEUTRAL_COLOUR } from './areas'
-import { eachSteps, goalSource, isActive, isTracked, periodStartFor, progressFor, type EachStep } from './goals'
+import { eachSteps, entryAreas, entryGoalIds, goalSource, isActive, isTracked, periodStartFor, progressFor, winAreas, winsById, type EachStep } from './goals'
+import { doneWinsInRange, timeInRange, weekRange } from './reports'
 import type { AppData, GoalDef, GoalProgress } from './types'
 
 export type AreaGoal = { goal: GoalDef; progress: GoalProgress; steps?: EachStep[] }
@@ -14,6 +15,7 @@ export type AreaCard = {
   total: number // goals in the area (to-dos are not counted)
   met: number // goals met
   fraction: number // average progress of the goals (0..1); an area with none counts as complete
+  extra: number // laps of extra effort this week outside the goals (the outer ring); 0 = none
 }
 
 export const OTHER_KEY = '__other'
@@ -38,6 +40,34 @@ export function ringCentre(met: number, total: number): string {
   return met === 0 ? String(total) : `${met}/${total}`
 }
 
+// The outer ring: this week's effort in an area that none of the area's goals counted. Time spent
+// on things (tasks, to-dos, plain time) that are in the area but not in one of its goals fills it at
+// a lap per 4 hours; each finished win in the area that is not in one of its goals adds what a goal
+// of the area would add to the inner ring (a share of 1/goals, or a quarter when it has none).
+export const EXTRA_LAP_MINUTES = 240
+const NO_GOALS_SHARE = 1 / 4
+
+export function areaExtra(data: AppData, areaId: string, goalsInArea: GoalDef[], now: Date): { laps: number; minutes: number; items: number } {
+  const range = weekRange(now)
+  const inGoal = new Set(goalsInArea.map((g) => g.id))
+  const byId = winsById(data.wins)
+  // A goal that counts "anything" already counts everything, so nothing in the area is left over.
+  const takesAllTime = goalsInArea.some((g) => g.kind === 'time' && goalSource(g) === 'any')
+  const takesAllWins = goalsInArea.some((g) => g.kind !== 'time' && goalSource(g) === 'any')
+
+  const minutes = takesAllTime
+    ? 0
+    : timeInRange(data.timeEntries, range)
+        .filter((e) => entryAreas(e, byId, data.goals).includes(areaId) && !entryGoalIds(e, byId).some((id) => inGoal.has(id)))
+        .reduce((sum, e) => sum + e.minutes, 0)
+  const items = takesAllWins
+    ? 0
+    : doneWinsInRange(data.wins, range).filter((w) => winAreas(w, data.goals).includes(areaId) && !w.goalIds.some((id) => inGoal.has(id))).length
+
+  const share = goalsInArea.length > 0 ? 1 / goalsInArea.length : NO_GOALS_SHARE
+  return { laps: minutes / EXTRA_LAP_MINUTES + items * share, minutes, items }
+}
+
 export function areaCards(data: AppData, now: Date): AreaCard[] {
   const leaf = data.goals.filter((g) => !g.childIds && isActive(g) && isTracked(g)) // containers feed no ring
   const entry = (goal: GoalDef): AreaGoal => {
@@ -52,7 +82,16 @@ export function areaCards(data: AppData, now: Date): AreaCard[] {
     const items = goals.map(entry)
     const met = items.filter((i) => i.progress.met).length
     // Nothing assigned means nothing left to do: the ring is full and reads 0/0.
-    return { key, name, colour, goals: items, total: items.length, met, fraction: items.length === 0 ? 1 : items.reduce((sum, i) => sum + i.progress.fraction, 0) / items.length }
+    return {
+      key,
+      name,
+      colour,
+      goals: items,
+      total: items.length,
+      met,
+      fraction: items.length === 0 ? 1 : items.reduce((sum, i) => sum + i.progress.fraction, 0) / items.length,
+      extra: key === OTHER_KEY ? 0 : areaExtra(data, key, goals, now).laps, // goals with no area have no area to credit
+    }
   }
 
   // Every area switched on gets a ring. A goal sits under every area it is labelled with.

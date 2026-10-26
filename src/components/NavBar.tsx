@@ -1,7 +1,7 @@
 export type Screen = 'today' | 'history' | 'manage'
 
 const ITEMS: { id: Screen; label: string }[] = [
-  { id: 'today', label: 'Today' },
+  { id: 'today', label: 'This week' },
   { id: 'history', label: 'History' },
   { id: 'manage', label: 'Manage' },
 ]

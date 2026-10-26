@@ -25,6 +25,7 @@ type Props = {
   items: ActivityItem[]
   title?: string
   emptyText?: string
+  showDay?: boolean // a week's list shows the day with each time
   editor?: TodayEditor
 }
 
@@ -43,6 +44,7 @@ export function TodayWins({
   items,
   title = "Today's wins",
   emptyText = 'Nothing logged yet. Whatever you do next counts.',
+  showDay = false,
   editor,
 }: Props) {
   const { colourOf } = useAreas()
@@ -123,7 +125,9 @@ export function TodayWins({
                   <div>{item.title}</div>
                   {detail(item) && <div className="muted">{detail(item)}</div>}
                 </div>
-                <span className="muted">{item.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                <span className="muted">
+                  {item.at.toLocaleString([], showDay ? { weekday: 'short', hour: 'numeric', minute: '2-digit' } : { hour: 'numeric', minute: '2-digit' })}
+                </span>
                 {editable(item) && (
                   <button className="link" aria-label={`Edit ${item.title}`} onClick={() => editor?.setEditingKey(item.key)}>
                     Edit
