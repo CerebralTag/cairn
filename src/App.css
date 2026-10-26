@@ -977,3 +977,14 @@
 .goal-row-tap:active {
   background: var(--color-ring-track);
 }
+
+.todo-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.todo-head .section-toggle {
+  flex: 1;
+  width: auto;
+}

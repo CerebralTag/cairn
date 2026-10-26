@@ -36,12 +36,30 @@ export function TodoList({ tasks, goals, timeEntries, onComplete, onAdd, onEdit,
 
   return (
     <section className="card">
-      <button className="section-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <h2>
-          To do <span className="muted">{tasks.length}</span>
-        </h2>
-        <span className="muted">{open ? 'Hide' : 'Show'}</span>
-      </button>
+      <div className="todo-head">
+        <button className="section-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <h2>
+            To do <span className="muted">{tasks.length}</span>
+          </h2>
+          <span className="muted">{open ? 'Hide' : 'Show'}</span>
+        </button>
+        {/* Adding is always one tap away, whether or not the list is open. */}
+        {!adding && (
+          <button className="link" onClick={() => setAdding(true)}>
+            + Add
+          </button>
+        )}
+      </div>
+      {adding && (
+        <WinForm
+          goals={goals}
+          onSave={(values) => {
+            onAdd(values)
+            setAdding(false)
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
       {open && (
         <>
           <ul className="list">
@@ -105,25 +123,11 @@ export function TodoList({ tasks, goals, timeEntries, onComplete, onAdd, onEdit,
             {tasks.length === 0 && <li className="muted">Nothing waiting. Add something when it comes to mind.</li>}
           </ul>
 
-          {adding ? (
-            <WinForm
-              goals={goals}
-              onSave={(values) => {
-                onAdd(values)
-                setAdding(false)
-              }}
-              onCancel={() => setAdding(false)}
-            />
-          ) : (
-            <div className="todo-footer">
-              <button className="link" onClick={() => setAdding(true)}>
-                + Add a task
-              </button>
-              <button className="link" onClick={onSeeAll}>
-                All tasks →
-              </button>
-            </div>
-          )}
+          <div className="todo-footer">
+            <button className="link" onClick={onSeeAll}>
+              All tasks →
+            </button>
+          </div>
         </>
       )}
     </section>
