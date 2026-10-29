@@ -992,3 +992,18 @@
 .version-detail {
   font-size: 0.75rem;
 }
+
+/* Up/down arrows to rearrange goals and areas */
+.move {
+  display: inline-flex;
+  gap: 0;
+}
+
+.move .link {
+  min-width: 32px;
+}
+
+.move .link:disabled {
+  opacity: 0.3;
+  cursor: default;
+}

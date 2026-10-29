@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { NEUTRAL_COLOUR, PALETTE_SIZE, paletteColour } from '../areas'
 import { fileableGoals } from '../areaGoals'
-import type { AreaDef, GoalDef } from '../types'
+import { canMoveArea, type Direction } from '../order'
+import type { AppData, AreaDef, GoalDef } from '../types'
 
 type Props = {
   areas: AreaDef[]
   goals: GoalDef[]
   otherOnToday: boolean
+  onMove: (id: string, dir: Direction) => void // reorder the rings
   onOtherOnToday: (on: boolean) => void
   onSave: (area: AreaDef, goalIds?: string[]) => void
   onRemove: (id: string) => void
@@ -79,7 +81,7 @@ function AreaForm({ initial, areas, goals, onSave, onCancel }: FormProps) {
   )
 }
 
-export function AreasPanel({ areas, goals, otherOnToday, onOtherOnToday, onSave, onRemove }: Props) {
+export function AreasPanel({ areas, goals, otherOnToday, onMove, onOtherOnToday, onSave, onRemove }: Props) {
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -97,7 +99,7 @@ export function AreasPanel({ areas, goals, otherOnToday, onOtherOnToday, onSave,
   return (
     <>
       <section className="card">
-        <p className="muted">Each area with goals gets a ring on Today. Switch one off to hide it and its goals there.</p>
+        <p className="muted">Each area gets a ring on Today, in this order (use the arrows to rearrange). Switch one off to hide its ring.</p>
         <ul className="list">
           {areas.map((area) =>
             editingId === area.id ? (
@@ -118,6 +120,14 @@ export function AreasPanel({ areas, goals, otherOnToday, onOtherOnToday, onSave,
                   />
                   On Today
                 </label>
+                <span className="move" role="group" aria-label={`Move ${area.name}`}>
+                  <button className="link" aria-label={`Move ${area.name} up`} disabled={!canMoveArea({ areas } as AppData, area.id, -1)} onClick={() => onMove(area.id, -1)}>
+                    ↑
+                  </button>
+                  <button className="link" aria-label={`Move ${area.name} down`} disabled={!canMoveArea({ areas } as AppData, area.id, 1)} onClick={() => onMove(area.id, 1)}>
+                    ↓
+                  </button>
+                </span>
                 <button className="link" onClick={() => setEditingId(area.id)}>
                   Edit
                 </button>

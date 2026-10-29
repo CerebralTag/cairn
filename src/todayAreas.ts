@@ -2,6 +2,7 @@
 // they are. Pure: data in, cards out.
 import { colourFor, NEUTRAL_COLOUR } from './areas'
 import { countsToward, eachSteps, entryAreas, entryGoalIds, goalSource, isActive, isTracked, periodStartFor, progressFor, winAreas, winsById, type EachStep } from './goals'
+import { sortGoals } from './order'
 import { doneWinsInRange, timeInRange, weekRange } from './reports'
 import type { AppData, GoalDef, GoalProgress } from './types'
 
@@ -119,20 +120,15 @@ export function areasColour(areas: AppData['areas'], ids: string[]): string | nu
   return area ? colourFor(areas, area.id) : null
 }
 
-// Every active goal for the period, whether or not its area has a ring (or has any area at all).
-// Ordered by area, in the order areas are listed, with goals that have none last, so goals that
-// share a colour sit together. Overarching goals have their own cards and are not included.
+// Every active goal for the period, whether or not its area has a ring (or has any area at all), in
+// the order set in Manage (src/order.ts): by area in area order, then as arranged within the area,
+// goals with no area last. Overarching goals have their own cards and are not included.
 export function todayGoals(data: AppData, now: Date): AreaGoal[] {
-  const rank = (g: GoalDef) => {
-    const i = Math.min(...g.areas.map((id) => data.areas.findIndex((a) => a.id === id)).filter((n) => n >= 0))
-    return Number.isFinite(i) ? i : data.areas.length
-  }
-  return data.goals
-    .filter((g) => !g.childIds && isActive(g))
-    .map((g, index) => ({ g, index, rank: rank(g) }))
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
-    .map(({ g }) => {
-      const start = periodStartFor(g.period, now)
-      return { goal: g, progress: progressFor(g, data, start), steps: goalSource(g) === 'each' ? eachSteps(g, data, start) : undefined }
-    })
+  return sortGoals(
+    data.goals.filter((g) => !g.childIds && isActive(g)),
+    data.areas,
+  ).map((g) => {
+    const start = periodStartFor(g.period, now)
+    return { goal: g, progress: progressFor(g, data, start), steps: goalSource(g) === 'each' ? eachSteps(g, data, start) : undefined }
+  })
 }

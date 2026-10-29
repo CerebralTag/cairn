@@ -1,7 +1,8 @@
 import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import { useAreas } from '../areasContext'
 import { formatMinutes } from '../goals'
-import type { AreaTotal } from '../reports'
+import { NEUTRAL_COLOUR } from '../areas'
+import { OTHER_AREA, type AreaTotal } from '../reports'
 
 // Time by area: one horizontal bar per area that has timed entries.
 export function AreaTimeChart({
@@ -16,7 +17,11 @@ export function AreaTimeChart({
   const { colourOf, nameOf } = useAreas()
   const timed = totals
     .filter((t) => t.minutes > 0)
-    .map((t) => ({ name: nameOf(t.area), colour: colourOf(t.area), minutes: t.minutes }))
+    .map((t) =>
+      t.area === OTHER_AREA
+        ? { name: 'Other', colour: NEUTRAL_COLOUR, minutes: t.minutes } // time that belongs to no area
+        : { name: nameOf(t.area), colour: colourOf(t.area), minutes: t.minutes },
+    )
 
   if (hideWhenEmpty && timed.length === 0) return null
 

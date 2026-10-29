@@ -7,6 +7,7 @@ import { DEFAULT_AREAS } from './areas'
 import { AreaRings } from './components/AreaRings'
 import { AreaTimeChart } from './components/AreaTimeChart'
 import { setAreaGoals } from './areaGoals'
+import { moveArea, moveGoal } from './order'
 import { completeGoal, goalFormStart, goalTapAction, uncompleteGoal } from './goalTap'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
@@ -462,12 +463,13 @@ function App() {
           }}
           goals={{
             goals: data.goals,
+            onMove: (id, dir) => setData((d) => moveGoal(d, id, dir)),
             onSave: saveGoal,
             onArchive: (id) => setData((d) => archiveGoal(d, id, new Date())),
             onRestore: (id) => setData((d) => restoreGoal(d, id)),
             onDelete: (id) => setData((d) => removeGoal(d, id)),
           }}
-          areas={{ areas: data.areas, goals: data.goals, otherOnToday: data.otherOnToday !== false, onOtherOnToday: (on) => setData((d) => ({ ...d, otherOnToday: on ? undefined : false })), onSave: saveArea, onRemove: (id) => setData((d) => removeArea(d, id)) }}
+          areas={{ areas: data.areas, goals: data.goals, onMove: (id, dir) => setData((d) => moveArea(d, id, dir)), otherOnToday: data.otherOnToday !== false, onOtherOnToday: (on) => setData((d) => ({ ...d, otherOnToday: on ? undefined : false })), onSave: saveArea, onRemove: (id) => setData((d) => removeArea(d, id)) }}
           // A backup replaces your saved history, but never stops a timer that's running right now.
           backup={{ data, onImport: (imported) => setData((d) => ({ ...imported, timer: d.timer })), onReset: resetEverything }}
         />

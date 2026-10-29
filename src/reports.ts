@@ -76,9 +76,11 @@ export function totalsFor(data: AppData, range: DateRange): Totals {
 
 export type AreaTotal = { area: Area; count: number; minutes: number }
 
-// Time by area, biggest first. A record is credited to EVERY one of its effective
-// areas, so the bars can add up to more than the total. Records with no area at
-// all are not charted (they still count in totalsFor).
+// The stand-in "area" for records that belong to no area at all, so unallocated time still shows.
+export const OTHER_AREA = '__other'
+
+// Time by area, biggest first, with "Other" (records with no area) last. A record is credited to
+// EVERY one of its effective areas, so the bars can add up to more than the total.
 export function byArea(data: AppData, range: DateRange): AreaTotal[] {
   const groups = new Map<Area, AreaTotal>()
   const group = (area: Area) => {
@@ -88,13 +90,16 @@ export function byArea(data: AppData, range: DateRange): AreaTotal[] {
   }
   const byId = winsById(data.wins)
 
+  // A record with no effective area is credited to "Other" rather than dropped.
+  const orOther = (areas: Area[]) => (areas.length > 0 ? areas : [OTHER_AREA])
   for (const w of doneWinsInRange(data.wins, range)) {
-    for (const area of winAreas(w, data.goals)) group(area).count += 1
+    for (const area of orOther(winAreas(w, data.goals))) group(area).count += 1
   }
   for (const e of timeInRange(data.timeEntries, range)) {
-    for (const area of entryAreas(e, byId, data.goals)) group(area).minutes += e.minutes
+    for (const area of orOther(entryAreas(e, byId, data.goals))) group(area).minutes += e.minutes
   }
-  return [...groups.values()].sort((a, b) => b.minutes - a.minutes || b.count - a.count)
+  const sorted = [...groups.values()].sort((a, b) => b.minutes - a.minutes || b.count - a.count)
+  return [...sorted.filter((g) => g.area !== OTHER_AREA), ...sorted.filter((g) => g.area === OTHER_AREA)]
 }
 
 export type DayTotal = { day: Date; count: number; minutes: number }

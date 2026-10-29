@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useAreas } from '../areasContext'
 import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, withTarget } from '../goals'
-import type { GoalDef } from '../types'
+import type { AppData, GoalDef } from '../types'
+import { canMoveGoal, sortGoals, type Direction } from '../order'
 import { GoalForm } from './GoalForm'
 
 type Props = {
   goals: GoalDef[]
+  onMove: (id: string, dir: Direction) => void // reorder within its area group
   onSave: (goal: GoalDef, backfill: boolean) => void
   onArchive: (id: string) => void
   onRestore: (id: string) => void
@@ -40,13 +42,15 @@ const STARTERS: { label: string; title: string; kind: 'count' | 'time'; source: 
   { label: '10 hours of anything', title: '10 hours of anything', kind: 'time', source: 'any', amount: 600 },
 ]
 
-export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Props) {
-  const { goalColour, nameOf } = useAreas()
+export function GoalsPanel({ goals, onMove, onSave, onArchive, onRestore, onDelete }: Props) {
+  const { areas, goalColour, nameOf } = useAreas()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showArchived, setShowArchived] = useState(false)
 
-  const active = goals.filter(isActive)
+  // Shown in the order Today uses, so what you arrange here is what you see there.
+  const active = sortGoals(goals.filter(isActive), areas)
+  const asData = { areas, goals } as AppData // just what the move checks need
   const archived = goals.filter((g) => !isActive(g))
 
   function save(goal: GoalDef, backfill: boolean) {
@@ -92,6 +96,14 @@ export function GoalsPanel({ goals, onSave, onArchive, onRestore, onDelete }: Pr
                   <div>{goal.title}</div>
                   <div className="muted">{describe(goal, goals, goal.areas.map(nameOf))}</div>
                 </div>
+                <span className="move" role="group" aria-label={`Move ${goal.title}`}>
+                  <button className="link" aria-label={`Move ${goal.title} up`} disabled={!canMoveGoal(asData, goal.id, -1)} onClick={() => onMove(goal.id, -1)}>
+                    ↑
+                  </button>
+                  <button className="link" aria-label={`Move ${goal.title} down`} disabled={!canMoveGoal(asData, goal.id, 1)} onClick={() => onMove(goal.id, 1)}>
+                    ↓
+                  </button>
+                </span>
                 <button className="link" onClick={() => setEditingId(goal.id)}>
                   Edit
                 </button>

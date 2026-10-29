@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   activityFor,
   bestStretch,
+  OTHER_AREA,
   byArea,
   customRange,
   dailyTotals,
@@ -80,11 +81,17 @@ describe('totalsFor and byArea', () => {
     expect(totalsFor(d, r)).toEqual({ count: 2, minutes: 90, activeDays: 3 })
   })
 
-  it('credits records to their effective areas; unlinked time is not charted', () => {
+  it('credits records to their effective areas; time with no area at all goes to Other, last', () => {
     expect(byArea(d, r)).toEqual([
       { area: 'music', count: 1, minutes: 75 },
       { area: 'health', count: 1, minutes: 0 },
+      { area: OTHER_AREA, count: 0, minutes: 15 }, // the session with no links at all
     ])
+  })
+
+  it('puts a finished win with no area under Other as well', () => {
+    const loose = data([], [doneWin(new Date(2026, 8, 27, 10))], [])
+    expect(byArea(loose, r)).toEqual([{ area: OTHER_AREA, count: 1, minutes: 0 }])
   })
 
   it('credits a record with several areas to each of them', () => {
