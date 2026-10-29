@@ -151,6 +151,7 @@ export type ActivityItem = {
   at: Date
   minutes: number
   amount?: number // a finished win's amount, if it has one
+  taskId?: string // a 'progress' line's unfinished task
   areas: Area[]
 }
 
@@ -185,6 +186,7 @@ export function activityFor(data: AppData, range: DateRange): ActivityItem[] {
       const item = progress.get(task.id) ?? {
         key: `progress-${task.id}`,
         kind: 'progress' as const,
+        taskId: task.id,
         title: task.title,
         at: e.at,
         minutes: 0,

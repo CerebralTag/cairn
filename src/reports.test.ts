@@ -160,6 +160,7 @@ describe('activityFor', () => {
       ['time', 'Practising', 25],
       ['progress', 'Big task', 30],
     ])
+    expect(items[1].taskId).toBe('t1') // so Edit can open the task
   })
 
   it('is newest first and empty for a quiet day', () => {

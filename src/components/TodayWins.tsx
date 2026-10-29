@@ -82,6 +82,24 @@ export function TodayWins({
       )
     }
 
+    // A progress line is time on a task that is not finished yet: Edit opens the task itself, as in
+    // the to-do list (so its title, areas and goals can be fixed here; its sessions stay as they are).
+    if (item.kind === 'progress') {
+      const task = editor.wins.find((w) => w.id === item.taskId)
+      if (!task) return null
+      return (
+        <WinForm
+          goals={editor.goals}
+          initial={task}
+          onSave={(values) => {
+            editor.onEditWin(task.id, values)
+            close()
+          }}
+          onCancel={close}
+        />
+      )
+    }
+
     const entry = editor.timeEntries.find((e) => e.id === item.key)
     if (!entry) return null
     return (
@@ -102,9 +120,7 @@ export function TodayWins({
     )
   }
 
-  // Wins and standalone time can be fixed here; "progress" lines belong to a task and
-  // are edited with it.
-  const editable = (item: ActivityItem) => editor !== undefined && item.kind !== 'progress'
+  const editable = editor !== undefined
 
   return (
     <section className="card">
@@ -114,7 +130,7 @@ export function TodayWins({
       ) : (
         <ul className="list">
           {items.map((item) =>
-            editingKey === item.key && editable(item) ? (
+            editingKey === item.key && editable ? (
               <li key={item.key} ref={formRef}>
                 <div className="grow">{form(item)}</div>
               </li>
@@ -128,7 +144,7 @@ export function TodayWins({
                 <span className="muted">
                   {item.at.toLocaleString([], showDay ? { weekday: 'short', hour: 'numeric', minute: '2-digit' } : { hour: 'numeric', minute: '2-digit' })}
                 </span>
-                {editable(item) && (
+                {editable && (
                   <button className="link" aria-label={`Edit ${item.title}`} onClick={() => editor?.setEditingKey(item.key)}>
                     Edit
                   </button>

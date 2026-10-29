@@ -37,7 +37,8 @@ Top to bottom:
 4. **"I did something"**, then **one repeatable-task row**: `[task ▾] [✓ Log] [▶ Start]`, most-used
    first, "Something else…" last (it opens the plain form or the timer form). With no repeatable tasks
    the row is the plain "Start a timer" button plus a link to add some.
-5. **This week's wins** (hidden until there is one; each shows its day and time, tap Edit to fix).
+5. **This week's wins** (hidden until there is one; each shows its day and time, tap Edit to fix; on a
+   "Progress" line, time on an unfinished to-do, Edit opens that to-do's own form).
 6. **Time by area · this week** (hidden until some time is logged; includes an Other bar).
 7. **To do**: collapsed by default; the header has the open count, Show/Hide and **+ Add** (the add
    form works while collapsed). A search box under the header shows even while collapsed: typing
