@@ -40,7 +40,9 @@ Top to bottom:
 5. **This week's wins** (hidden until there is one; each shows its day and time, tap Edit to fix).
 6. **Time by area · this week** (hidden until some time is logged; includes an Other bar).
 7. **To do**: collapsed by default; the header has the open count, Show/Hide and **+ Add** (the add
-   form works while collapsed); open, it has area filter chips (All, each area, No area).
+   form works while collapsed). A search box under the header shows even while collapsed: typing
+   opens the list filtered to titles containing every word typed (case and accents ignored), and
+   clearing it closes the list again.
 
 ### Tapping goals
 
