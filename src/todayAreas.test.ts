@@ -231,6 +231,30 @@ describe('the outer ring: extra effort in an area outside its goals', () => {
     expect(extra(data([quickGoal], [quickWin, plain]), [quickGoal]).items).toBe(1)
   })
 
+  it('counts time past a met time goal as extra, and nothing below the target', () => {
+    const tagged = (at: Date, minutes: number) => session(at, minutes, { areas: ['music'], goalIds: ['ga'] })
+    const below = data([goalA], [], [tagged(new Date(2026, 9, 13, 9), 90)]) // 90 of 120
+    expect(extra(below, [goalA])).toMatchObject({ over: 0, laps: 0 })
+    const past = data([goalA], [], [tagged(new Date(2026, 9, 12, 9), 90), tagged(new Date(2026, 9, 13, 9), 60)]) // 150 of 120
+    expect(extra(past, [goalA])).toMatchObject({ minutes: 0, over: 30 })
+    expect(extra(past, [goalA]).laps).toBeCloseTo(30 / EXTRA_LAP_MINUTES)
+    const anyTime: GoalDef = { ...goalA, source: 'any' } // counts all the time, and still has a surplus
+    expect(extra(data([anyTime], [], [session(new Date(2026, 9, 13, 9), 150, { areas: ['music'] })]), [anyTime]).over).toBe(30)
+  })
+
+  it('adds up a daily goal surplus day by day, and keeps a monthly one to what was done this week', () => {
+    const daily: GoalDef = { ...goalA, period: 'day', targets: [{ from: SINCE, amount: 30 }] }
+    const days = data([daily], [], [
+      session(new Date(2026, 9, 12, 9), 45, { goalIds: ['ga'] }), // 15 over
+      session(new Date(2026, 9, 13, 9), 20, { goalIds: ['ga'] }), // under: nothing, and no debt
+      session(new Date(2026, 9, 14, 9), 40, { goalIds: ['ga'] }), // 10 over
+    ])
+    expect(extra(days, [daily]).over).toBe(25)
+    const monthly: GoalDef = { ...goalA, period: 'month', targets: [{ from: SINCE, amount: 60 }] }
+    const month = data([monthly], [], [session(new Date(2026, 9, 2, 9), 200, { goalIds: ['ga'] }), session(new Date(2026, 9, 13, 9), 30, { goalIds: ['ga'] })])
+    expect(extra(month, [monthly]).over).toBe(30) // 170 over this month, but only 30 of it this week
+  })
+
   it('shows up on the area card, and goals with no area never have any', () => {
     const d = { ...withAreas(data([goalA], [], [session(new Date(2026, 9, 13, 9), 120, { areas: ['music'] })])) }
     expect(areaCards(d, NOW).find((c) => c.key === 'music')?.extra).toBeCloseTo(0.5)

@@ -101,7 +101,9 @@ goal never makes entries count toward it, so editing areas never rewrites histor
   with no goals is a tick). **Rings count goals only, never to-dos.** Goals with no area feed an
   "Other" ring ("Goals" if no areas exist) with its own switch in Manage.
 - **Outer ring** (`areaExtra`): this week's extra effort in the area outside its goals: time on
-  things in the area that no goal of it counted (a lap per `EXTRA_LAP_MINUTES` = 240), plus each
+  things in the area that no goal of it counted (a lap per `EXTRA_LAP_MINUTES` = 240), plus time past
+  a met time goal's target (`minutesOverTarget`: a daily goal's surplus per day so far this week, a
+  weekly goal's surplus, a monthly goal's surplus capped at what it got this week), plus each
   finished win in the area outside its goals (worth what one goal of the area is worth on the inner
   ring, a quarter if it has none). A win a rule goal of the area already counts is not extra. A thin
   light first lap, then a bolder second lap; nothing is drawn until there is some.

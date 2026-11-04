@@ -1,7 +1,7 @@
 // What Today's area rings show: for each area switched on, the goals in it and how far along
 // they are. Pure: data in, cards out.
 import { colourFor, NEUTRAL_COLOUR } from './areas'
-import { countsToward, eachSteps, entryAreas, entryGoalIds, goalSource, isActive, isTracked, periodStartFor, progressFor, winAreas, winsById, type EachStep } from './goals'
+import { countsToward, eachSteps, entryAreas, entryGoalIds, goalSource, isActive, isTracked, periodEnd, periodStartFor, progressFor, winAreas, winsById, type EachStep } from './goals'
 import { sortGoals } from './order'
 import { doneWinsInRange, timeInRange, weekRange } from './reports'
 import type { AppData, GoalDef, GoalProgress } from './types'
@@ -48,7 +48,27 @@ export function ringCentre(met: number, total: number): string {
 export const EXTRA_LAP_MINUTES = 240
 const NO_GOALS_SHARE = 1 / 4
 
-export function areaExtra(data: AppData, areaId: string, goalsInArea: GoalDef[], now: Date): { laps: number; minutes: number; items: number } {
+// Time past a met time goal's target, as far as it falls in this week: a daily goal's surplus on each
+// day so far; a weekly goal's surplus; a monthly goal's surplus, but no more than it got this week.
+export function minutesOverTarget(goal: GoalDef, data: AppData, now: Date): number {
+  if (goal.kind !== 'time' || goal.childIds) return 0
+  const week = weekRange(now)
+  const over = (start: Date) => {
+    const p = progressFor(goal, data, start)
+    return p.target > 0 ? Math.max(p.done - p.target, 0) : 0
+  }
+  if (goal.period === 'week') return over(week.start)
+  if (goal.period === 'day') {
+    let sum = 0
+    for (let day = week.start; day.getTime() <= now.getTime(); day = periodEnd('day', day)) sum += over(day)
+    return sum
+  }
+  const months = [...new Set([periodStartFor('month', week.start).getTime(), periodStartFor('month', now).getTime()])]
+  const thisWeek = progressFor({ ...goal, period: 'week' }, data, week.start).done
+  return Math.min(months.reduce((sum, m) => sum + over(new Date(m)), 0), thisWeek)
+}
+
+export function areaExtra(data: AppData, areaId: string, goalsInArea: GoalDef[], now: Date): { laps: number; minutes: number; over: number; items: number } {
   const range = weekRange(now)
   const inGoal = new Set(goalsInArea.map((g) => g.id))
   const byId = winsById(data.wins)
@@ -66,8 +86,11 @@ export function areaExtra(data: AppData, areaId: string, goalsInArea: GoalDef[],
     (w) => winAreas(w, data.goals).includes(areaId) && !w.goalIds.some((id) => inGoal.has(id)) && !countGoals.some((g) => countsToward(g, w)),
   ).length
 
+  // Going past a time goal is extra effort too: the minutes beyond its target count like time outside it.
+  const over = goalsInArea.reduce((sum, g) => sum + minutesOverTarget(g, data, now), 0)
+
   const share = goalsInArea.length > 0 ? 1 / goalsInArea.length : NO_GOALS_SHARE
-  return { laps: minutes / EXTRA_LAP_MINUTES + items * share, minutes, items }
+  return { laps: (minutes + over) / EXTRA_LAP_MINUTES + items * share, minutes, over, items }
 }
 
 export function areaCards(data: AppData, now: Date): AreaCard[] {
