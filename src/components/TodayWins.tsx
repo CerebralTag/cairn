@@ -40,6 +40,70 @@ function detail(item: ActivityItem): string {
     .join(' · ')
 }
 
+// The form that fixes one entry: a win, time on an unfinished task (its task's form), or standalone time.
+export function EntryForm({ item, editor }: { item: ActivityItem; editor: TodayEditor }) {
+  const close = () => editor.setEditingKey(null)
+
+  if (item.kind === 'win') {
+    const win = editor.wins.find((w) => w.id === item.key)
+    if (!win) return null
+    return (
+      <WinForm
+        goals={editor.goals}
+        initial={{ title: win.title, areas: win.areas, goalIds: win.goalIds, at: win.completedAt, amount: win.amount }}
+        withWhen
+        onSave={(values) => {
+          editor.onEditWin(win.id, values)
+          close()
+        }}
+        onCancel={close}
+        onDelete={() => {
+          if (!window.confirm(`Delete "${win.title}"? Time logged on it is kept.`)) return
+          editor.onDeleteWin(win.id)
+          close()
+        }}
+      />
+    )
+  }
+
+  // A progress line is time on a task that is not finished yet: Edit opens the task itself, as in
+  // the to-do list (so its title, areas and goals can be fixed here; its sessions stay as they are).
+  if (item.kind === 'progress') {
+    const task = editor.wins.find((w) => w.id === item.taskId)
+    if (!task) return null
+    return (
+      <WinForm
+        goals={editor.goals}
+        initial={task}
+        onSave={(values) => {
+          editor.onEditWin(task.id, values)
+          close()
+        }}
+        onCancel={close}
+      />
+    )
+  }
+
+  const entry = editor.timeEntries.find((e) => e.id === item.key)
+  if (!entry) return null
+  return (
+    <TimeEntryForm
+      entry={entry}
+      goals={editor.goals}
+      onSave={(patch) => {
+        editor.onUpdateEntry(entry.id, patch)
+        close()
+      }}
+      onCancel={close}
+      onDelete={() => {
+        if (!window.confirm(`Delete ${formatMinutes(entry.minutes)} of "${item.title}"?`)) return
+        editor.onDeleteEntry(entry.id)
+        close()
+      }}
+    />
+  )
+}
+
 export function TodayWins({
   items,
   title = "Today's wins",
@@ -56,70 +120,6 @@ export function TodayWins({
     if (editingKey) formRef.current?.scrollIntoView({ block: 'center' })
   }, [editingKey])
 
-  function form(item: ActivityItem) {
-    if (!editor) return null
-    const close = () => editor.setEditingKey(null)
-
-    if (item.kind === 'win') {
-      const win = editor.wins.find((w) => w.id === item.key)
-      if (!win) return null
-      return (
-        <WinForm
-          goals={editor.goals}
-          initial={{ title: win.title, areas: win.areas, goalIds: win.goalIds, at: win.completedAt, amount: win.amount }}
-          withWhen
-          onSave={(values) => {
-            editor.onEditWin(win.id, values)
-            close()
-          }}
-          onCancel={close}
-          onDelete={() => {
-            if (!window.confirm(`Delete "${win.title}"? Time logged on it is kept.`)) return
-            editor.onDeleteWin(win.id)
-            close()
-          }}
-        />
-      )
-    }
-
-    // A progress line is time on a task that is not finished yet: Edit opens the task itself, as in
-    // the to-do list (so its title, areas and goals can be fixed here; its sessions stay as they are).
-    if (item.kind === 'progress') {
-      const task = editor.wins.find((w) => w.id === item.taskId)
-      if (!task) return null
-      return (
-        <WinForm
-          goals={editor.goals}
-          initial={task}
-          onSave={(values) => {
-            editor.onEditWin(task.id, values)
-            close()
-          }}
-          onCancel={close}
-        />
-      )
-    }
-
-    const entry = editor.timeEntries.find((e) => e.id === item.key)
-    if (!entry) return null
-    return (
-      <TimeEntryForm
-        entry={entry}
-        goals={editor.goals}
-        onSave={(patch) => {
-          editor.onUpdateEntry(entry.id, patch)
-          close()
-        }}
-        onCancel={close}
-        onDelete={() => {
-          if (!window.confirm(`Delete ${formatMinutes(entry.minutes)} of "${item.title}"?`)) return
-          editor.onDeleteEntry(entry.id)
-          close()
-        }}
-      />
-    )
-  }
-
   const editable = editor !== undefined
 
   return (
@@ -132,7 +132,7 @@ export function TodayWins({
           {items.map((item) =>
             editingKey === item.key && editable ? (
               <li key={item.key} ref={formRef}>
-                <div className="grow">{form(item)}</div>
+                <div className="grow">{editor && <EntryForm item={item} editor={editor} />}</div>
               </li>
             ) : (
               <li key={item.key}>

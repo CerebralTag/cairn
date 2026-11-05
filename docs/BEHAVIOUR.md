@@ -32,15 +32,15 @@ Top to bottom:
 2. **Header card**: a ring per area (see DATA-MODEL), then every goal for the week as one flat list.
    Colour is the only sign of a goal's area on its row; there are no area headers. Tap a ring to
    narrow the list to that area, tap again for everything. Under it, a bead per win finished this
-   week (area coloured, grey if no area) with a caption "N wins this week · 9h logged".
+   week (area coloured, grey if no area) with a caption "N wins this week · 9h logged". Tapping a
+   bead shows what it was and when, with Edit, which opens its form under the beads. The week's
+   wins are not listed on this screen (History lists them).
 3. **Running timer** card, when one is running.
 4. **"I did something"**, then **one repeatable-task row**: `[task ▾] [✓ Log] [▶ Start]`, most-used
    first, "Something else…" last (it opens the plain form or the timer form). With no repeatable tasks
    the row is the plain "Start a timer" button plus a link to add some.
-5. **This week's wins** (hidden until there is one; each shows its day and time, tap Edit to fix; on a
-   "Progress" line, time on an unfinished to-do, Edit opens that to-do's own form).
-6. **Time by area · this week** (hidden until some time is logged; includes an Other bar).
-7. **To do**: collapsed by default; the header has the open count, Show/Hide and **+ Add** (the add
+5. **Time by area · this week** (hidden until some time is logged; includes an Other bar).
+6. **To do**: collapsed by default; the header has the open count, Show/Hide and **+ Add** (the add
    form works while collapsed). A search box under the header shows even while collapsed: typing
    opens the list filtered to titles containing every word typed (case and accents ignored), and
    clearing it closes the list again.
@@ -59,7 +59,8 @@ Top to bottom:
 
 ## History
 
-Week / Month / Year / Custom tabs: running totals, a calendar heatmap (tap a day for its detail), goal
+Week / Month / Year / Custom tabs: running totals, a calendar heatmap (tap a day for its detail), on
+the Week tab the week's wins listed with day and time (read-only; a selected day lists that day), goal
 history bars (neutral), time by area, and a **Full log** where any win or time entry can be edited
 or deleted. Zero-minute days are neutral records and are left as they are.
 

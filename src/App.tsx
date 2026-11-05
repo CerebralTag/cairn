@@ -18,10 +18,9 @@ import { RepeatableRow } from './components/RepeatableRow'
 import { RecoveryScreen } from './components/RecoveryScreen'
 import { TimerCard } from './components/TimerCard'
 import { TodayBeads } from './components/TodayBeads'
-import type { TodayEditor } from './components/TodayWins'
+import { EntryForm, type TodayEditor } from './components/TodayWins'
 import { TimerStarter, type TimerStart } from './components/TimerStarter'
 import { Toast } from './components/Toast'
-import { TodayWins } from './components/TodayWins'
 import { TodoList } from './components/TodoList'
 import { WinForm } from './components/WinForm'
 import { toDateInput } from './dates'
@@ -497,7 +496,8 @@ function App() {
   const unfinished = data.wins.filter((w) => w.status === 'todo' || w.status === 'doing')
   // The screen is the week so far: wins and time accumulate through the week.
   const todayItems = activityFor(data, weekRange(now))
-  // Lets an entry be fixed right in Today's list (or from a bead), without a trip through History.
+  // Lets a win be fixed from its bead, without a trip through History.
+  const editingItem = todayItems.find((i) => i.key === editingKey)
   const todayEditor: TodayEditor = {
     wins: data.wins,
     timeEntries: data.timeEntries,
@@ -532,6 +532,8 @@ function App() {
             </div>
           )}
           <TodayBeads items={todayItems} onEdit={setEditingKey} when="this week" />
+          {/* The week's wins are listed in History; here a bead's Edit opens its form right under the beads. */}
+          {editingItem && <EntryForm item={editingItem} editor={todayEditor} />}
         </section>
 
         {data.timer && <TimerCard timer={data.timer} onStop={finishTimer} onDiscard={() => setData((d) => discardTimer(d))} />}
@@ -596,8 +598,6 @@ function App() {
           </>
         )}
 
-        {/* No wins yet today: no section (an empty box feels like a to-do). */}
-        {todayItems.length > 0 && <TodayWins items={todayItems} editor={todayEditor} title="This week's wins" showDay />}
         {/* This week's time by area, above the to-dos; nothing shows until some time is logged. */}
         <AreaTimeChart totals={byArea(data, weekRange(now))} title="Time by area · this week" hideWhenEmpty />
         <TodoList

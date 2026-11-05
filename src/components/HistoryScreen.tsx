@@ -142,6 +142,16 @@ export function HistoryScreen({ data, ...logHandlers }: { data: AppData } & LogH
         </button>
       </section>
 
+      {/* The week's wins, listed (This week shows them only as beads). A selected day lists that day instead. */}
+      {tab === 'week' && !selectedDay && (
+        <TodayWins
+          items={activityFor(data, range)}
+          title={`Wins · ${rangeTitle(tab, range)}`}
+          emptyText="Nothing logged this week. Rest counts too."
+          showDay
+        />
+      )}
+
       {selectedDay && (
         <>
           <TodayWins
