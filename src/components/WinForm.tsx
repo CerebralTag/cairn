@@ -65,12 +65,15 @@ export function WinForm({
     if (measure.value === '' && s.amount !== undefined) setMeasure({ kind: 'number', value: String(s.amount) })
   }
 
-  // Ticking a goal adds its areas; unticking leaves them (you may have chosen them yourself).
+  // Ticking a goal adds its areas; unticking leaves them (you may have chosen them yourself). It also
+  // sets the time/number box to what the goal adds up, so "60" for a time goal is saved as minutes.
   function toggleGoal(id: string) {
     if (goalIds.includes(id)) return setGoalIds(goalIds.filter((g) => g !== id))
     setGoalIds([...goalIds, id])
-    const goalAreas = leafGoals.find((g) => g.id === id)?.areas ?? []
-    setAreas([...new Set([...areas, ...goalAreas])])
+    const goal = leafGoals.find((g) => g.id === id)
+    setAreas([...new Set([...areas, ...(goal?.areas ?? [])])])
+    if (withMinutes && goal?.kind === 'time') setMeasure({ ...measure, kind: 'time' })
+    if (withMinutes && goal?.kind === 'amount') setMeasure({ ...measure, kind: 'number' })
   }
 
   function handleSubmit(event: React.FormEvent) {
