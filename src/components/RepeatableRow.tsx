@@ -18,8 +18,8 @@ type Props = {
 export function RepeatableRow({ quickWins, timerRunning, onLog, onStart, onElseLog, onElseStart }: Props) {
   const ordered = topQuickWins(quickWins, quickWins.length) // most used first
   const [picked, setPicked] = useState<string>(ordered[0]?.id ?? ELSE)
-  // The chosen task may have been removed meanwhile: fall back to the first.
-  const current = ordered.some((q) => q.id === picked) ? picked : (ordered[0]?.id ?? ELSE)
+  // The chosen task may have been removed meanwhile: fall back to the first ("Something else…" stays).
+  const current = picked === ELSE || ordered.some((q) => q.id === picked) ? picked : (ordered[0]?.id ?? ELSE)
 
   return (
     <div className="repeat-row" role="group" aria-label="Repeatable tasks">
