@@ -27,7 +27,7 @@ import { toDateInput } from './dates'
 import { addLoggedWin, addTask, applyEntryEdit, applyWinEdit, deleteEntry, type TimeEntryPatch, type WinValues } from './edits'
 import { formatMinutes, isActive, linkByArea, periodEnd, periodStartFor, syncEachGoals } from './goals'
 import { archiveGoal, deleteWin, removeArea, removeGoal, restoreGoal, withStatus } from './manage'
-import { applyQuickWin, applyTemplateToWins, asksForMinutes, contributionsFor, removeTap, revertTemplateApplication, undoQuickWin } from './quickWins'
+import { applyQuickWin, applyTemplateToWins, asksForMinutes, suggestedMinutes, contributionsFor, removeTap, revertTemplateApplication, undoQuickWin } from './quickWins'
 import { activityFor, byArea, weekRange } from './reports'
 import { DATA_STORAGE_KEY, loadData, readRawData, requestPersistence, saveData } from './storage'
 import { deserialize } from './serialize'
@@ -574,6 +574,7 @@ function App() {
             {askingQuickId !== null && data.quickWins.some((q) => q.id === askingQuickId) ? (
               <QuickWinAsk
                 quickWin={data.quickWins.find((q) => q.id === askingQuickId)!}
+                suggested={suggestedMinutes(data.quickWins.find((q) => q.id === askingQuickId)!, data, now)}
                 // "Just log it" has no minutes: it logs with the template's own, without asking again.
                 onLog={(minutes) => tapQuickWin(askingQuickId, { minutes })}
                 onCancel={() => setAskingQuickId(null)}

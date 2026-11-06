@@ -53,7 +53,8 @@ Top to bottom:
   goal ticked, the box on Time (Number for amount goals), the cursor in it.
 - **A Routine** is untouched by those taps: its task bubbles do the logging. Tap one not yet done to
   log it (it asks how long first if the task is set to, or counts toward a time goal and has no
-  minutes); tap a done one to take its latest log back. Each bubble takes its task's own area colour.
+  minutes, or has minutes of its own: a timed step like "Reading, 2h" is a running total, so the
+  question starts on what is still left this period); tap a done one to take its latest log back. Each bubble takes its task's own area colour.
 - Goals that count only to-dos finished or repeatable-task taps are not tappable (a plain win would
   not count).
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { linkByArea, progressFor } from './goals'
-import { applyQuickWin, asksForMinutes, removeTap, applyTemplateToWins, contributionsFor, revertTemplateApplication, templateHasDetails, topQuickWins, undoQuickWin, winsNamed } from './quickWins'
+import { applyQuickWin, asksForMinutes, removeTap, suggestedMinutes, applyTemplateToWins, contributionsFor, revertTemplateApplication, templateHasDetails, topQuickWins, undoQuickWin, winsNamed } from './quickWins'
 import { DEFAULT_AREAS } from './areas'
 import { SINCE, amountWin, data, doneWin, guitar, session, squats, todo } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
@@ -308,6 +308,16 @@ describe('when tapping a repeatable task asks how long', () => {
   })
   it('ignores an archived time goal', () => {
     expect(asksForMinutes(call, [{ ...timeGoal, archivedAt: SINCE }])).toBe(false)
+  })
+  it('asks for a timed step of a Routine, suggesting what is left of it this period', () => {
+    const routine: GoalDef = { id: 'ch', title: 'Chores', areas: [], kind: 'count', period: 'week', source: 'each', targets: [{ from: SINCE, amount: 1 }] }
+    const reading: QuickWin = { id: 'r', title: 'Reading', areas: [], goalIds: ['ch'], minutes: 120, uses: 0 }
+    expect(asksForMinutes(reading, [routine])).toBe(true)
+    const d = { ...data([routine]), quickWins: [reading] }
+    expect(suggestedMinutes(reading, d, WED)).toBe(120)
+    const after = applyQuickWin(d, 'r', WED, { minutes: 90 })!.data
+    expect(suggestedMinutes(reading, after, WED)).toBe(30)
+    expect(asksForMinutes(reading, [{ ...routine, archivedAt: SINCE }])).toBe(false)
   })
 })
 

@@ -4,14 +4,15 @@ import type { QuickWin } from '../types'
 
 type Props = {
   quickWin: QuickWin
+  suggested?: number // minutes to start with (what a Routine step still needs), else its own
   onLog: (minutes?: number) => void
   onCancel: () => void
 }
 
 // Shown after tapping a repeatable task that asks how long: the minutes become a time
 // entry attached to the win. "Just log it" records the win with no time (or its usual minutes).
-export function QuickWinAsk({ quickWin, onLog, onCancel }: Props) {
-  const [minutes, setMinutes] = useState(quickWin.minutes ? String(quickWin.minutes) : '')
+export function QuickWinAsk({ quickWin, suggested = quickWin.minutes, onLog, onCancel }: Props) {
+  const [minutes, setMinutes] = useState(suggested ? String(suggested) : '')
   const parsed = positiveNumber(minutes)
 
   function handleSubmit(event: React.FormEvent) {

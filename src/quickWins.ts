@@ -1,6 +1,6 @@
 // Quick wins: one-tap templates for wins ("10 squats"). Tapping one logs an ordinary
 // win with the template's amount, areas and goal links (and minutes, if it has them).
-import { goalSource, isActive, isTracked, periodStartFor, progressFor, progressLabel, targetFor } from './goals'
+import { eachSteps, goalSource, isActive, isTracked, periodStartFor, progressFor, progressLabel, targetFor } from './goals'
 import { nameKey } from './suggest'
 import type { AppData, QuickWin, TimeEntry, Win } from './types'
 
@@ -9,12 +9,28 @@ export function topQuickWins(quickWins: QuickWin[], count: number): QuickWin[] {
   return [...quickWins].sort((a, b) => b.uses - a.uses).slice(0, count)
 }
 
-// Whether tapping this repeatable task should ask how long first: it is set to, or it counts
+// Whether tapping this repeatable task should ask how long first: it is set to; or it is a timed
+// step of a Routine ("Reading, 2h"), a running total you may not finish in one go; or it counts
 // toward a time goal but has no minutes of its own (a win with no time can't move a time goal).
 export function asksForMinutes(template: QuickWin, goals: AppData['goals']): boolean {
   if (template.askMinutes) return true
-  if (template.minutes) return false
+  if (template.minutes) return inRoutine(template, goals)
   return template.goalIds.some((id) => goals.some((g) => g.id === id && g.kind === 'time' && !g.childIds && isActive(g)))
+}
+
+function inRoutine(template: QuickWin, goals: AppData['goals']): boolean {
+  return template.goalIds.some((id) => goals.some((g) => g.id === id && goalSource(g) === 'each' && !g.childIds && isActive(g)))
+}
+
+// The minutes to suggest when asking how long: what a timed Routine step still needs this period
+// (so one "Log it" finishes it), else the task's own minutes.
+export function suggestedMinutes(template: QuickWin, data: AppData, now: Date): number | undefined {
+  for (const g of data.goals) {
+    if (goalSource(g) !== 'each' || g.childIds || !isActive(g) || !template.goalIds.includes(g.id)) continue
+    const step = eachSteps(g, data, periodStartFor(g.period, now)).find((st) => st.id === template.id)
+    if (step && step.unit === 'minutes' && step.count < step.need) return step.need - step.count
+  }
+  return template.minutes
 }
 
 // Log a quick win as a finished win stamped `now`. Returns the new data and the
