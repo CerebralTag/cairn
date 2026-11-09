@@ -75,6 +75,12 @@ export function taggedTemplates(goal: GoalDef, data: AppData): QuickWin[] {
   return data.quickWins.filter((q) => q.goalIds.includes(goal.id))
 }
 
+// The to-dos a Routine also holds: one-off items with the Routine among their goals. Done once, a
+// to-do stays done in every later period until it is reopened or taken out of the Routine.
+export function taggedTodos(goal: GoalDef, data: AppData): Win[] {
+  return data.wins.filter((w) => w.origin === 'todo' && w.status !== 'dropped' && w.goalIds.includes(goal.id))
+}
+
 // What a tagged task needs for an "each" goal, read from the task itself: minutes if it has
 // minutes ("2 hours"), else that many taps if it has a number of 2 or more ("3 a week"), else once.
 export type EachNeed = { unit: 'taps' | 'minutes'; need: number }
@@ -87,13 +93,13 @@ export function eachNeed(template: QuickWin): EachNeed {
 
 // The tagged repeatable tasks of an "each" goal: how far each got in the period starting at
 // `periodStart` (taps or minutes), what it needs, and whether that is enough.
-export type EachStep = { id: string; title: string; areas: Area[]; count: number; need: number; unit: 'taps' | 'minutes'; done: boolean }
+export type EachStep = { id: string; title: string; areas: Area[]; count: number; need: number; unit: 'taps' | 'minutes'; done: boolean; todo?: true }
 
 export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): EachStep[] {
   const start = periodStart.getTime()
   const end = periodEnd(goal.period, periodStart).getTime()
   const taps = eachTaps(goal, data, start, end)
-  return taggedTemplates(goal, data).map((q) => {
+  const tasks = taggedTemplates(goal, data).map((q): EachStep => {
     const { unit, need } = eachNeed(q)
     const mine = taps.get(q.id) ?? []
     const count =
@@ -102,6 +108,11 @@ export function eachSteps(goal: GoalDef, data: AppData, periodStart: Date): Each
         : data.timeEntries.filter((e) => e.winId !== undefined && mine.includes(e.winId)).reduce((sum, e) => sum + e.minutes, 0)
     return { id: q.id, title: q.title, areas: q.areas, count, need, unit, done: count >= need }
   })
+  const todos = taggedTodos(goal, data).map((w): EachStep => {
+    const done = w.status === 'done' && w.completedAt !== undefined && w.completedAt.getTime() < end
+    return { id: w.id, title: w.title, areas: w.areas, count: done ? 1 : 0, need: 1, unit: 'taps', done, todo: true }
+  })
+  return [...tasks, ...todos]
 }
 
 // The finished wins in [start, end) that counted toward an "each" goal, by repeatable task:
@@ -122,7 +133,7 @@ export function syncEachGoals(data: AppData, now: Date): AppData {
   let changed = false
   const goals = data.goals.map((g) => {
     if (g.childIds || !isActive(g) || goalSource(g) !== 'each') return g
-    const count = taggedTemplates(g, data).length
+    const count = taggedTemplates(g, data).length + taggedTodos(g, data).length
     if (g.targets.length > 0 && currentTarget(g, now) === count) return g
     changed = true
     return withTarget(g, count, now)

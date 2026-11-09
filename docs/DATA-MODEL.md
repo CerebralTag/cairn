@@ -76,7 +76,10 @@ goal never makes entries count toward it, so editing areas never rewrites histor
 - **Routine ("each") goals**: met when as many tasks are complete as the target says. A task is
   complete when it has had what it needs, read from **the task itself** (`eachNeed`): its minutes
   if it has them (the minutes logged on its taps in the period reach it), else its number if that is
-  2 or more (that many taps), else once. The target is how many tasks are tagged; `syncEachGoals`
+  2 or more (that many taps), else once. A Routine can also hold **to-dos** (`taggedTodos`: wins
+  with `origin: 'todo'` and the goal in `goalIds`, not dropped); one is a step done from when it was
+  finished onward, in every later period, until reopened or untagged. The target is how many tasks
+  and to-dos are tagged; `syncEachGoals`
   records the new number in `targets[]` from the current period on whenever a task is tagged,
   untagged or removed, so past periods keep theirs. What was done comes from finished wins that
   carry the goal id and a `quickWinId`; a task since removed still counts once, so a past hit is never

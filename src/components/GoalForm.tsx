@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { positiveNumber } from '../limits'
 import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, isTracked, withTarget } from '../goals'
-import { tasksIn, type NewRoutineTask, type RoutineTasks } from '../routineTasks'
-import type { Area, GoalDef, GoalPeriod, GoalSource, QuickWin } from '../types'
+import { tasksIn, todoChoices, type NewRoutineTask, type RoutineTasks } from '../routineTasks'
+import type { Area, GoalDef, GoalPeriod, GoalSource, QuickWin, Win } from '../types'
 import { AreaChips } from './AreaChips'
 
 type GoalType = 'time' | 'count' | 'amount' | 'routine' | 'overarching'
@@ -11,6 +11,7 @@ type Props = {
   initial?: GoalDef // present = editing
   allGoals: GoalDef[]
   quickWins: QuickWin[] // the repeatable tasks a Routine can hold
+  wins: Win[] // for the to-dos a Routine can hold
   onSave: (goal: GoalDef, backfill: boolean, routine?: RoutineTasks) => void
   onCancel: () => void
 }
@@ -25,7 +26,7 @@ function typeOf(goal: GoalDef): GoalType {
 // count) and the period (day, week, month) are fixed once created, because past
 // targets are stored in that unit and length.
 // Editing areas is safe: progress comes from explicit links, not from areas.
-export function GoalForm({ initial, allGoals, quickWins, onSave, onCancel }: Props) {
+export function GoalForm({ initial, allGoals, quickWins, wins, onSave, onCancel }: Props) {
   const now = new Date()
   const editing = initial !== undefined
   const [title, setTitle] = useState(initial?.title ?? '')
@@ -44,6 +45,8 @@ export function GoalForm({ initial, allGoals, quickWins, onSave, onCancel }: Pro
   // A Routine's tasks: tick existing repeatable tasks, or name new ones (made when it is saved).
   const [taskIds, setTaskIds] = useState<string[]>(() => (initial ? tasksIn(initial.id, quickWins).map((q) => q.id) : []))
   const [added, setAdded] = useState<NewRoutineTask[]>([])
+  const todos = todoChoices(initial?.id, wins)
+  const [todoIds, setTodoIds] = useState<string[]>(() => (initial ? todos.filter((w) => w.goalIds.includes(initial.id)).map((w) => w.id) : []))
   const [newTask, setNewTask] = useState('')
   const [newMinutes, setNewMinutes] = useState('')
   // Its own tasks first, then the rest, each in saved order (fixed while the form is open, so a row
@@ -65,6 +68,10 @@ export function GoalForm({ initial, allGoals, quickWins, onSave, onCancel }: Pro
 
   function toggleTask(id: string) {
     setTaskIds(taskIds.includes(id) ? taskIds.filter((t) => t !== id) : [...taskIds, id])
+  }
+
+  function toggleTodo(id: string) {
+    setTodoIds(todoIds.includes(id) ? todoIds.filter((t) => t !== id) : [...todoIds, id])
   }
 
   function addTask() {
@@ -114,7 +121,7 @@ export function GoalForm({ initial, allGoals, quickWins, onSave, onCancel }: Pro
     const linkExisting = !editing && backfill && areas.length > 0 && rule === 'linked'
     // A task still being typed counts as added, so Save doesn't drop it.
     const pending = newTask.trim() !== '' ? [{ title: newTask.trim(), minutes: positiveNumber(newMinutes) }] : []
-    onSave(unchanged ? updated : withTarget(updated, target, now), linkExisting, eachRule ? { ids: taskIds, added: [...added, ...pending] } : undefined)
+    onSave(unchanged ? updated : withTarget(updated, target, now), linkExisting, eachRule ? { ids: taskIds, added: [...added, ...pending], todoIds } : undefined)
   }
 
   return (
@@ -230,6 +237,20 @@ export function GoalForm({ initial, allGoals, quickWins, onSave, onCancel }: Pro
               Add
             </button>
           </div>
+        </fieldset>
+      )}
+
+      {eachRule && todos.length > 0 && (
+        <fieldset className="children">
+          <legend className="muted">To-dos in this routine</legend>
+          {todos.map((w) => (
+            <label key={w.id}>
+              <input type="checkbox" checked={todoIds.includes(w.id)} onChange={() => toggleTodo(w.id)} />
+              {w.title}
+              {w.status === 'done' && <span className="muted">done</span>}
+            </label>
+          ))}
+          <span className="muted">A to-do is done once; it stays done here until you reopen it.</span>
         </fieldset>
       )}
 

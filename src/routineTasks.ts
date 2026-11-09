@@ -1,10 +1,17 @@
-// Choosing a Routine's tasks from the Routine's side: tick the repeatable tasks that belong to it,
-// and name new ones. A task belongs to a Routine when the Routine is among its goals.
+// Choosing a Routine's tasks from the Routine's side: tick the repeatable tasks and to-dos that
+// belong to it, and name new tasks. Either belongs to a Routine when the Routine is among its goals.
 import { nameKey } from './suggest'
-import type { AppData, GoalDef, QuickWin } from './types'
+import type { AppData, GoalDef, QuickWin, Win } from './types'
 
 export type NewRoutineTask = { title: string; minutes?: number }
-export type RoutineTasks = { ids: string[]; added: NewRoutineTask[] }
+export type RoutineTasks = { ids: string[]; added: NewRoutineTask[]; todoIds?: string[] }
+
+// The to-dos a Routine can take: those still open, plus any it already holds (done ones included).
+export function todoChoices(goalId: string | undefined, wins: Win[]): Win[] {
+  return wins.filter(
+    (w) => w.origin === 'todo' && (w.status === 'todo' || w.status === 'doing' || (goalId !== undefined && w.status === 'done' && w.goalIds.includes(goalId))),
+  )
+}
 
 // The repeatable tasks tagged to a goal.
 export function tasksIn(goalId: string, quickWins: QuickWin[]): QuickWin[] {
@@ -37,5 +44,15 @@ export function setRoutineTasks(data: AppData, goal: GoalDef, tasks: RoutineTask
     if (!wanted.has(q.id) && has) return { ...q, goalIds: q.goalIds.filter((id) => id !== goal.id) }
     return q
   })
-  return { ...data, quickWins }
+  // To-dos: only when the form gave a choice, so other callers leave them as they are.
+  if (!tasks.todoIds) return { ...data, quickWins }
+  const keep = new Set(tasks.todoIds)
+  const wins = data.wins.map((w) => {
+    if (w.origin !== 'todo') return w
+    const has = w.goalIds.includes(goal.id)
+    if (keep.has(w.id) && !has) return { ...w, goalIds: [...w.goalIds, goal.id] }
+    if (!keep.has(w.id) && has) return { ...w, goalIds: w.goalIds.filter((id) => id !== goal.id) }
+    return w
+  })
+  return { ...data, quickWins, wins }
 }

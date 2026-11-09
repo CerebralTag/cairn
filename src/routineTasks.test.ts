@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { eachSteps, syncEachGoals, currentTarget } from './goals'
+import { eachSteps, progressFor, syncEachGoals, currentTarget } from './goals'
+import { withStatus } from './manage'
 import { applyQuickWin } from './quickWins'
-import { setRoutineTasks, tasksIn } from './routineTasks'
-import { SINCE, data } from './testHelpers'
+import { setRoutineTasks, tasksIn, todoChoices } from './routineTasks'
+import { SINCE, data, todo } from './testHelpers'
 import type { GoalDef, QuickWin } from './types'
 
 const WED = new Date(2026, 9, 14, 9)
@@ -33,5 +34,39 @@ describe("a Routine's tasks, from the Routine", () => {
     const d = syncEachGoals(setRoutineTasks(tapped, chores, { ids: ['t'], added: [] }), WED)
     expect(currentTarget(d.goals[0], WED)).toBe(1)
     expect(eachSteps(d.goals[0], d, MON).map((s) => s.id)).toEqual(['t'])
+  })
+})
+
+describe('to-dos in a Routine', () => {
+  const NEXT_MON = new Date(2026, 9, 19)
+  const fix = { ...todo({ id: 'f', title: 'Fix the gate' }), origin: 'todo' as const }
+  const other = { ...todo({ id: 'o', title: 'Call the bank' }), origin: 'todo' as const }
+  const base = { ...data([{ ...chores, targets: [{ from: SINCE, amount: 1 }] }], [fix, other]), quickWins: [trash] }
+  const withFix = syncEachGoals(setRoutineTasks(base, chores, { ids: ['t'], added: [], todoIds: ['f'] }), WED)
+
+  it('are added and taken out from the Routine, and count toward its target', () => {
+    expect(withFix.wins.find((w) => w.id === 'f')?.goalIds).toEqual(['ch'])
+    expect(withFix.wins.find((w) => w.id === 'o')?.goalIds).toEqual([])
+    expect(currentTarget(withFix.goals[0], WED)).toBe(2)
+    const out = setRoutineTasks(withFix, chores, { ids: ['t'], added: [], todoIds: [] })
+    expect(out.wins.find((w) => w.id === 'f')?.goalIds).toEqual([])
+    expect(setRoutineTasks(withFix, chores, { ids: ['t'], added: [] }).wins).toBe(withFix.wins) // no choice given: left alone
+  })
+
+  it('show as a step, done once finished and still done the next week, but not before', () => {
+    expect(eachSteps(withFix.goals[0], withFix, MON).find((s) => s.id === 'f')).toMatchObject({ todo: true, done: false })
+    const done = { ...withFix, wins: withFix.wins.map((w) => (w.id === 'f' ? withStatus(w, 'done', WED) : w)) }
+    expect(eachSteps(done.goals[0], done, MON).find((s) => s.id === 'f')?.done).toBe(true)
+    expect(eachSteps(done.goals[0], done, NEXT_MON).find((s) => s.id === 'f')?.done).toBe(true)
+    expect(eachSteps(done.goals[0], done, new Date(2026, 9, 5)).find((s) => s.id === 'f')?.done).toBe(false)
+    expect(progressFor(done.goals[0], done, MON)).toMatchObject({ done: 1, target: 2 })
+  })
+
+  it('leave the Routine when dropped, and only open ones (or its own) are offered', () => {
+    const dropped = syncEachGoals({ ...withFix, wins: withFix.wins.map((w) => (w.id === 'f' ? { ...w, status: 'dropped' as const } : w)) }, WED)
+    expect(currentTarget(dropped.goals[0], WED)).toBe(1)
+    const doneElsewhere = { ...other, id: 'x', status: 'done' as const, completedAt: WED }
+    const doneHere = { ...fix, status: 'done' as const, completedAt: WED, goalIds: ['ch'] }
+    expect(todoChoices('ch', [other, doneElsewhere, doneHere]).map((w) => w.id)).toEqual(['o', 'f'])
   })
 })

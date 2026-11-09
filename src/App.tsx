@@ -201,7 +201,8 @@ function App() {
 
   const handleAddTask = (values: WinValues) => setData((d) => addTask(d, values, new Date()))
   const handleEditWin = (id: string, values: WinValues) => setData((d) => applyWinEdit(d, id, values))
-  const handleDeleteWin = (id: string) => setData((d) => deleteWin(d, id))
+  // A to-do can be a step of a Routine, so dropping or deleting one moves that Routine's target.
+  const handleDeleteWin = (id: string) => setData((d) => syncEachGoals(deleteWin(d, id), new Date()))
   const handleUpdateEntry = (id: string, patch: TimeEntryPatch) => setData((d) => applyEntryEdit(d, id, patch))
   const handleDeleteEntry = (id: string) => setData((d) => deleteEntry(d, id))
 
@@ -211,14 +212,14 @@ function App() {
     const previous = data.wins.find((w) => w.id === id)
     if (!previous) return
     const now = new Date()
-    setData((d) => ({ ...d, wins: d.wins.map((w) => (w.id === id ? withStatus(w, status, now) : w)) }))
+    setData((d) => syncEachGoals({ ...d, wins: d.wins.map((w) => (w.id === id ? withStatus(w, status, now) : w)) }, now))
     const message =
       status === 'done' ? `Done: "${previous.title}"` : previous.status === 'done' ? `Reopened "${previous.title}"` : null
     if (message) {
       setToast({
         id: crypto.randomUUID(),
         message,
-        undo: () => setData((d) => ({ ...d, wins: d.wins.map((w) => (w.id === id ? previous : w)) })),
+        undo: () => setData((d) => syncEachGoals({ ...d, wins: d.wins.map((w) => (w.id === id ? previous : w)) }, new Date())),
       })
     }
   }
@@ -466,6 +467,7 @@ function App() {
           goals={{
             goals: data.goals,
             quickWins: data.quickWins,
+            wins: data.wins,
             onMove: (id, dir) => setData((d) => moveGoal(d, id, dir)),
             onSave: saveGoal,
             onArchive: (id) => setData((d) => archiveGoal(d, id, new Date())),
@@ -526,7 +528,14 @@ function App() {
 
         {/* The header: goal rings, and under them a bead for every win finished today. */}
         <section className="card header-card">
-          <AreaRings data={data} now={now} onLogTask={(id) => tapQuickWin(id)} onUnlogTask={untapTask} onTapGoal={tapGoal} />
+          <AreaRings
+            data={data}
+            now={now}
+            // A Routine step is a repeatable task or a to-do: a to-do is finished or reopened in place.
+            onLogTask={(id) => (data.wins.some((w) => w.id === id) ? setStatus(id, 'done') : tapQuickWin(id))}
+            onUnlogTask={(goal, id) => (data.wins.some((w) => w.id === id) ? setStatus(id, 'todo') : untapTask(goal, id))}
+            onTapGoal={tapGoal}
+          />
           {leafGoals.length === 0 && (
             <div>
               <p className="muted">Goals fill the rings as you go.</p>

@@ -241,7 +241,7 @@ function GoalRow({
               </span>
             )
           })}
-          {(steps ?? []).length === 0 && <span className="muted">Tag repeatable tasks to this goal in Manage.</span>}
+          {(steps ?? []).length === 0 && <span className="muted">Add tasks or to-dos to it from its Edit in Manage → Goals.</span>}
         </div>
       )}
     </div>

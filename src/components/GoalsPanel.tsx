@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAreas } from '../areasContext'
 import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, withTarget } from '../goals'
-import type { AppData, GoalDef, QuickWin } from '../types'
+import type { AppData, GoalDef, QuickWin, Win } from '../types'
 import type { RoutineTasks } from '../routineTasks'
 import { canMoveGoal, sortGoals, type Direction } from '../order'
 import { GoalForm } from './GoalForm'
@@ -9,6 +9,7 @@ import { GoalForm } from './GoalForm'
 type Props = {
   goals: GoalDef[]
   quickWins: QuickWin[]
+  wins: Win[]
   onMove: (id: string, dir: Direction) => void // reorder within its area group
   onSave: (goal: GoalDef, backfill: boolean, routine?: RoutineTasks) => void
   onArchive: (id: string) => void
@@ -44,7 +45,7 @@ const STARTERS: { label: string; title: string; kind: 'count' | 'time'; source: 
   { label: '10 hours of anything', title: '10 hours of anything', kind: 'time', source: 'any', amount: 600 },
 ]
 
-export function GoalsPanel({ goals, quickWins, onMove, onSave, onArchive, onRestore, onDelete }: Props) {
+export function GoalsPanel({ goals, quickWins, wins, onMove, onSave, onArchive, onRestore, onDelete }: Props) {
   const { areas, goalColour, nameOf } = useAreas()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -88,7 +89,7 @@ export function GoalsPanel({ goals, quickWins, onMove, onSave, onArchive, onRest
             editingId === goal.id ? (
               <li key={goal.id}>
                 <div className="grow">
-                  <GoalForm initial={goal} allGoals={goals} quickWins={quickWins} onSave={save} onCancel={() => setEditingId(null)} />
+                  <GoalForm initial={goal} allGoals={goals} quickWins={quickWins} wins={wins} onSave={save} onCancel={() => setEditingId(null)} />
                 </div>
               </li>
             ) : (
@@ -120,7 +121,7 @@ export function GoalsPanel({ goals, quickWins, onMove, onSave, onArchive, onRest
       </section>
 
       {adding ? (
-        <GoalForm allGoals={goals} quickWins={quickWins} onSave={save} onCancel={() => setAdding(false)} />
+        <GoalForm allGoals={goals} quickWins={quickWins} wins={wins} onSave={save} onCancel={() => setAdding(false)} />
       ) : (
         <>
           <button className="did-something" onClick={() => setAdding(true)}>

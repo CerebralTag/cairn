@@ -54,7 +54,8 @@ Top to bottom:
 - **A Routine** is untouched by those taps: its task bubbles do the logging. Tap one not yet done to
   log it (it asks how long first if the task is set to, or counts toward a time goal and has no
   minutes, or has minutes of its own: a timed step like "Reading, 2h" is a running total, so the
-  question starts on what is still left this period); tap a done one to take its latest log back. Each bubble takes its task's own area colour.
+  question starts on what is still left this period). A to-do in the Routine is a bubble too: tapping
+  it finishes the to-do, and it stays done in later weeks until reopened; tap a done one to take its latest log back. Each bubble takes its task's own area colour.
 - Goals that count only to-dos finished or repeatable-task taps are not tappable (a plain win would
   not count).
 
@@ -76,7 +77,8 @@ A segmented control: **Tasks / Goals / Areas / Backup**, with a Version card at 
 - **Goals**: add (type, period, what counts, areas, target), starter chips, move up/down, edit,
   archive. Types: Time, Count, Amount, **Routine** (with a "Track this routine" switch and a "Tasks in
   this routine" list: tick or untick repeatable tasks, or add a new one by name with optional minutes;
-  a name matching an existing task tags that task instead of making a second), Overarching.
+  a name matching an existing task tags that task instead of making a second; and a "To-dos in this
+  routine" list of open to-dos to tick in), Overarching.
 - **Areas**: move up/down (this orders the rings), an On Today switch, edit (including "Goals in this
   area" checkboxes), remove, plus a fixed **Other** row (goals with no area) with its own switch.
 - **Backup**: Export (Share sheet on iPhone, a download on a computer), Restore (validated import
