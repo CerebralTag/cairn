@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { positiveNumber } from '../limits'
 import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, isTracked, withTarget } from '../goals'
-import type { Area, GoalDef, GoalPeriod, GoalSource } from '../types'
+import { tasksIn, type NewRoutineTask, type RoutineTasks } from '../routineTasks'
+import type { Area, GoalDef, GoalPeriod, GoalSource, QuickWin } from '../types'
 import { AreaChips } from './AreaChips'
 
 type GoalType = 'time' | 'count' | 'amount' | 'routine' | 'overarching'
@@ -9,7 +10,8 @@ type GoalType = 'time' | 'count' | 'amount' | 'routine' | 'overarching'
 type Props = {
   initial?: GoalDef // present = editing
   allGoals: GoalDef[]
-  onSave: (goal: GoalDef, backfill: boolean) => void
+  quickWins: QuickWin[] // the repeatable tasks a Routine can hold
+  onSave: (goal: GoalDef, backfill: boolean, routine?: RoutineTasks) => void
   onCancel: () => void
 }
 
@@ -23,7 +25,7 @@ function typeOf(goal: GoalDef): GoalType {
 // count) and the period (day, week, month) are fixed once created, because past
 // targets are stored in that unit and length.
 // Editing areas is safe: progress comes from explicit links, not from areas.
-export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
+export function GoalForm({ initial, allGoals, quickWins, onSave, onCancel }: Props) {
   const now = new Date()
   const editing = initial !== undefined
   const [title, setTitle] = useState(initial?.title ?? '')
@@ -39,6 +41,15 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
     return String(initial.kind === 'time' ? target / 60 : target)
   })
   const [childIds, setChildIds] = useState<string[]>(initial?.childIds ?? [])
+  // A Routine's tasks: tick existing repeatable tasks, or name new ones (made when it is saved).
+  const [taskIds, setTaskIds] = useState<string[]>(() => (initial ? tasksIn(initial.id, quickWins).map((q) => q.id) : []))
+  const [added, setAdded] = useState<NewRoutineTask[]>([])
+  const [newTask, setNewTask] = useState('')
+  const [newMinutes, setNewMinutes] = useState('')
+  // Its own tasks first, then the rest, each in saved order (fixed while the form is open, so a row
+  // doesn't jump when ticked).
+  const ownIds = new Set(initial ? tasksIn(initial.id, quickWins).map((q) => q.id) : [])
+  const taskChoices = [...quickWins].sort((a, b) => Number(ownIds.has(b.id)) - Number(ownIds.has(a.id)))
 
   // An overarching goal can only include goals that repeat on the same schedule as it.
   const candidates = allGoals.filter((g) => !g.childIds && g.id !== initial?.id && isActive(g) && isTracked(g) && g.period === period)
@@ -50,6 +61,18 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
 
   function toggleArea(area: Area) {
     setAreas(areas.includes(area) ? areas.filter((a) => a !== area) : [...areas, area])
+  }
+
+  function toggleTask(id: string) {
+    setTaskIds(taskIds.includes(id) ? taskIds.filter((t) => t !== id) : [...taskIds, id])
+  }
+
+  function addTask() {
+    const title = newTask.trim()
+    if (title === '') return
+    setAdded([...added, { title, minutes: positiveNumber(newMinutes) }])
+    setNewTask('')
+    setNewMinutes('')
   }
 
   function toggleChild(id: string) {
@@ -89,7 +112,9 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
     // Only changed when the target differs, so unrelated edits don't add history rows.
     const unchanged = initial && currentTarget(initial, now) === target
     const linkExisting = !editing && backfill && areas.length > 0 && rule === 'linked'
-    onSave(unchanged ? updated : withTarget(updated, target, now), linkExisting)
+    // A task still being typed counts as added, so Save doesn't drop it.
+    const pending = newTask.trim() !== '' ? [{ title: newTask.trim(), minutes: positiveNumber(newMinutes) }] : []
+    onSave(unchanged ? updated : withTarget(updated, target, now), linkExisting, eachRule ? { ids: taskIds, added: [...added, ...pending] } : undefined)
   }
 
   return (
@@ -167,8 +192,45 @@ export function GoalForm({ initial, allGoals, onSave, onCancel }: Props) {
           {tracked
             ? `Counts toward its areas. Met when every repeatable task tagged to it has had what it needs ${PERIOD_WORDS[period].per.replace('per ', 'each ')}.`
             : 'Just a container: it groups its repeatable tasks on Today. It is not counted toward any area, goal or history.'}{' '}
-          Tag the tasks in Manage under Repeatable tasks.
+          Its tasks are repeatable tasks: tick them here, or add new ones.
         </p>
+      )}
+
+      {eachRule && (
+        <fieldset className="children">
+          <legend className="muted">Tasks in this routine</legend>
+          {taskChoices.map((q) => (
+            <label key={q.id}>
+              <input type="checkbox" checked={taskIds.includes(q.id)} onChange={() => toggleTask(q.id)} />
+              {q.title}
+              {q.minutes ? <span className="muted">{formatMinutes(q.minutes)}</span> : null}
+            </label>
+          ))}
+          {added.map((t, i) => (
+            <label key={`new-${i}`}>
+              <input type="checkbox" checked onChange={() => setAdded(added.filter((_, j) => j !== i))} />
+              {t.title}
+              <span className="muted">{t.minutes ? `${formatMinutes(t.minutes)} · ` : ''}new</span>
+            </label>
+          ))}
+          <div className="routine-add">
+            <input
+              placeholder="Add a task"
+              aria-label="New task name"
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                e.preventDefault() // add the task, don't save the whole form
+                addTask()
+              }}
+            />
+            <input type="number" min="1" placeholder="Minutes" aria-label="New task minutes (optional)" value={newMinutes} onChange={(e) => setNewMinutes(e.target.value)} />
+            <button type="button" className="link" onClick={addTask} disabled={newTask.trim() === ''}>
+              Add
+            </button>
+          </div>
+        </fieldset>
       )}
 
       {type !== 'overarching' && !eachRule && (

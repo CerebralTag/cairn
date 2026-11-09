@@ -8,6 +8,7 @@ import { AreaRings } from './components/AreaRings'
 import { AreaTimeChart } from './components/AreaTimeChart'
 import { setAreaGoals } from './areaGoals'
 import { moveArea, moveGoal } from './order'
+import { setRoutineTasks, type RoutineTasks } from './routineTasks'
 import { completeGoal, goalFormStart, goalTapAction, uncompleteGoal } from './goalTap'
 import { HistoryScreen } from './components/HistoryScreen'
 import { ManageScreen, type ManageTab } from './components/ManageScreen'
@@ -302,11 +303,13 @@ function App() {
 
   // ----- goals, areas, quick wins -----
 
-  function saveGoal(goal: GoalDef, backfill: boolean) {
+  // `routine`, when given, is the full set of a Routine's tasks (from its edit form).
+  function saveGoal(goal: GoalDef, backfill: boolean, routine?: RoutineTasks) {
     setData((d) => {
       const exists = d.goals.some((g) => g.id === goal.id)
       const goals = exists ? d.goals.map((g) => (g.id === goal.id ? goal : g)) : [...d.goals, goal]
-      const next = syncEachGoals({ ...d, goals }, new Date())
+      const withTasks = routine ? setRoutineTasks({ ...d, goals }, goal, routine) : { ...d, goals }
+      const next = syncEachGoals(withTasks, new Date())
       return backfill ? { ...next, ...linkByArea(goal, next) } : next
     })
   }
@@ -462,6 +465,7 @@ function App() {
           }}
           goals={{
             goals: data.goals,
+            quickWins: data.quickWins,
             onMove: (id, dir) => setData((d) => moveGoal(d, id, dir)),
             onSave: saveGoal,
             onArchive: (id) => setData((d) => archiveGoal(d, id, new Date())),

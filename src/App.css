@@ -1020,3 +1020,15 @@
   background: var(--color-bg);
   color: var(--color-text);
 }
+
+/* A Routine's edit form: name a new task (minutes optional) and add it */
+.routine-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.children label .muted {
+  margin-left: auto;
+}

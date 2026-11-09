@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useAreas } from '../areasContext'
 import { PERIOD_WORDS, currentTarget, formatMinutes, goalSource, isActive, withTarget } from '../goals'
-import type { AppData, GoalDef } from '../types'
+import type { AppData, GoalDef, QuickWin } from '../types'
+import type { RoutineTasks } from '../routineTasks'
 import { canMoveGoal, sortGoals, type Direction } from '../order'
 import { GoalForm } from './GoalForm'
 
 type Props = {
   goals: GoalDef[]
+  quickWins: QuickWin[]
   onMove: (id: string, dir: Direction) => void // reorder within its area group
-  onSave: (goal: GoalDef, backfill: boolean) => void
+  onSave: (goal: GoalDef, backfill: boolean, routine?: RoutineTasks) => void
   onArchive: (id: string) => void
   onRestore: (id: string) => void
   onDelete: (id: string) => void
@@ -42,7 +44,7 @@ const STARTERS: { label: string; title: string; kind: 'count' | 'time'; source: 
   { label: '10 hours of anything', title: '10 hours of anything', kind: 'time', source: 'any', amount: 600 },
 ]
 
-export function GoalsPanel({ goals, onMove, onSave, onArchive, onRestore, onDelete }: Props) {
+export function GoalsPanel({ goals, quickWins, onMove, onSave, onArchive, onRestore, onDelete }: Props) {
   const { areas, goalColour, nameOf } = useAreas()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -53,8 +55,8 @@ export function GoalsPanel({ goals, onMove, onSave, onArchive, onRestore, onDele
   const asData = { areas, goals } as AppData // just what the move checks need
   const archived = goals.filter((g) => !isActive(g))
 
-  function save(goal: GoalDef, backfill: boolean) {
-    onSave(goal, backfill)
+  function save(goal: GoalDef, backfill: boolean, routine?: RoutineTasks) {
+    onSave(goal, backfill, routine)
     setAdding(false)
     setEditingId(null)
   }
@@ -86,7 +88,7 @@ export function GoalsPanel({ goals, onMove, onSave, onArchive, onRestore, onDele
             editingId === goal.id ? (
               <li key={goal.id}>
                 <div className="grow">
-                  <GoalForm initial={goal} allGoals={goals} onSave={save} onCancel={() => setEditingId(null)} />
+                  <GoalForm initial={goal} allGoals={goals} quickWins={quickWins} onSave={save} onCancel={() => setEditingId(null)} />
                 </div>
               </li>
             ) : (
@@ -118,7 +120,7 @@ export function GoalsPanel({ goals, onMove, onSave, onArchive, onRestore, onDele
       </section>
 
       {adding ? (
-        <GoalForm allGoals={goals} onSave={save} onCancel={() => setAdding(false)} />
+        <GoalForm allGoals={goals} quickWins={quickWins} onSave={save} onCancel={() => setAdding(false)} />
       ) : (
         <>
           <button className="did-something" onClick={() => setAdding(true)}>

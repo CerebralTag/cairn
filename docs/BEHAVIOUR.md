@@ -74,7 +74,9 @@ A segmented control: **Tasks / Goals / Areas / Backup**, with a Version card at 
   Done / Dropped with an area filter and a per-task menu (edit, +time, start/pause, drop, reopen,
   delete).
 - **Goals**: add (type, period, what counts, areas, target), starter chips, move up/down, edit,
-  archive. Types: Time, Count, Amount, **Routine** (with a "Track this routine" switch), Overarching.
+  archive. Types: Time, Count, Amount, **Routine** (with a "Track this routine" switch and a "Tasks in
+  this routine" list: tick or untick repeatable tasks, or add a new one by name with optional minutes;
+  a name matching an existing task tags that task instead of making a second), Overarching.
 - **Areas**: move up/down (this orders the rings), an On Today switch, edit (including "Goals in this
   area" checkboxes), remove, plus a fixed **Other** row (goals with no area) with its own switch.
 - **Backup**: Export (Share sheet on iPhone, a download on a computer), Restore (validated import
